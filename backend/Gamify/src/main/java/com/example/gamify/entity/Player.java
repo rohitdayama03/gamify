@@ -30,7 +30,8 @@ public class Player {
     @Column(name = "player_bio", columnDefinition = "TEXT")
     private String playerBio;
 
-    @Column(name = "language", length = 30)
+    // Comma-separated list, e.g. "English, Hindi"
+    @Column(name = "language", length = 255)
     private String language;
 
     @Column(name = "country", length = 50)

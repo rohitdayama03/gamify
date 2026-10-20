@@ -7,7 +7,9 @@ import com.example.gamify.entity.Player;
 import com.example.gamify.exception.ResourceNotFoundException;
 import com.example.gamify.mapper.PlayerMapper;
 import com.example.gamify.repository.BgmiProfileRepository;
+import com.example.gamify.repository.ChatMessageRepository;
 import com.example.gamify.repository.EfootballProfileRepository;
+import com.example.gamify.repository.PlayerConnectionRepository;
 import com.example.gamify.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,8 @@ public class PlayerServiceImpl implements PlayerService {
     private final PlayerRepository playerRepository;
     private final BgmiProfileRepository bgmiProfileRepository;
     private final EfootballProfileRepository efootballProfileRepository;
+    private final PlayerConnectionRepository connectionRepository;
+    private final ChatMessageRepository chatMessageRepository;
     private final PlayerMapper playerMapper;
 
     @Override
@@ -57,6 +61,9 @@ public class PlayerServiceImpl implements PlayerService {
     public void deleteAccount(String username) {
         Player player = playerRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("Player not found with username: " + username));
+        // Invites and messages reference the player by foreign key, so remove them first
+        chatMessageRepository.deleteAllInvolving(player);
+        connectionRepository.deleteAllInvolving(player);
         playerRepository.delete(player);
     }
 

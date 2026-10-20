@@ -1,5 +1,7 @@
 package com.example.gamify.dto;
 
+import java.time.OffsetDateTime;
+
 public record PlayerResponse(
         Long playerId,
         String username,
@@ -7,5 +9,7 @@ public record PlayerResponse(
         String language,
         String country,
         BgmiProfileResponse bgmiProfile,
-        EfootballProfileResponse efootballProfile
+        EfootballProfileResponse efootballProfile,
+        OffsetDateTime createdAt,
+        OffsetDateTime updatedAt
 ) {}

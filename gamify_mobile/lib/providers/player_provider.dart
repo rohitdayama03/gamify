@@ -10,11 +10,13 @@ class PlayerProvider extends ChangeNotifier {
   PlayerResponse? _currentPlayer;
   List<PlayerResponse> _searchResults = [];
   bool _isLoading = false;
+  bool _isSearching = false;
   String? _errorMessage;
 
   PlayerResponse? get currentPlayer => _currentPlayer;
   List<PlayerResponse> get searchResults => _searchResults;
   bool get isLoading => _isLoading;
+  bool get isSearching => _isSearching;
   String? get errorMessage => _errorMessage;
 
   Future<void> fetchMyProfile() async {
@@ -29,6 +31,20 @@ class PlayerProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  Future<bool> updateProfile(Map<String, dynamic> data) async {
+    try {
+      final response = await _apiClient.dio.put(ApiEndpoints.updateProfile, data: data);
+      _currentPlayer = PlayerResponse.fromJson(response.data);
+      _errorMessage = null;
+      notifyListeners();
+      return true;
+    } on DioException catch (e) {
+      _errorMessage = e.response?.data['message'] ?? 'Update failed';
+      notifyListeners();
+      return false;
     }
   }
 
@@ -56,6 +72,22 @@ class PlayerProvider extends ChangeNotifier {
     }
   }
 
+  Future<bool> deleteBgmiProfile() => _deleteGameProfile(ApiEndpoints.bgmiProfile);
+
+  Future<bool> deleteEfootballProfile() => _deleteGameProfile(ApiEndpoints.efootballProfile);
+
+  Future<bool> _deleteGameProfile(String endpoint) async {
+    try {
+      await _apiClient.dio.delete(endpoint);
+      await fetchMyProfile();
+      return true;
+    } on DioException catch (e) {
+      _errorMessage = e.response?.data['message'] ?? 'Delete failed';
+      notifyListeners();
+      return false;
+    }
+  }
+
   Future<void> searchPlayers({
     String? username,
     String? country,
@@ -63,7 +95,7 @@ class PlayerProvider extends ChangeNotifier {
     String? bgmiRole,
     String? efootballTier,
   }) async {
-    _isLoading = true;
+    _isSearching = true;
     notifyListeners();
 
     final queryParams = <String, dynamic>{};
@@ -84,7 +116,7 @@ class PlayerProvider extends ChangeNotifier {
     } on DioException catch (e) {
       _errorMessage = e.response?.data['message'] ?? 'Search failed';
     } finally {
-      _isLoading = false;
+      _isSearching = false;
       notifyListeners();
     }
   }

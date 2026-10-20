@@ -58,6 +58,8 @@ class PlayerResponse {
   final String? country;
   final BgmiProfileResponse? bgmiProfile;
   final EfootballProfileResponse? efootballProfile;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
 
   PlayerResponse({
     required this.playerId,
@@ -67,6 +69,8 @@ class PlayerResponse {
     this.country,
     this.bgmiProfile,
     this.efootballProfile,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory PlayerResponse.fromJson(Map<String, dynamic> json) {
@@ -82,6 +86,11 @@ class PlayerResponse {
       efootballProfile: json['efootballProfile'] != null
           ? EfootballProfileResponse.fromJson(json['efootballProfile'])
           : null,
+      createdAt: _parseDate(json['createdAt']),
+      updatedAt: _parseDate(json['updatedAt']),
     );
   }
+
+  static DateTime? _parseDate(dynamic value) =>
+      value is String ? DateTime.tryParse(value)?.toLocal() : null;
 }

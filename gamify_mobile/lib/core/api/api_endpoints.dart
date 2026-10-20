@@ -2,8 +2,8 @@ class ApiEndpoints {
   // Auth Endpoints
   static const String register = '/auth/register';
   static const String login = '/auth/login';
-  static const String secretQuestion = '/auth/secret-question';
-  static const String resetPassword = '/auth/reset-password';
+  static const String secretQuestion = '/auth/forgot-password/question';
+  static const String resetPassword = '/auth/forgot-password/reset';
   static const String logout = '/auth/logout';
 
   // Profile Endpoints
@@ -12,9 +12,19 @@ class ApiEndpoints {
   static const String deleteAccount = '/players/me';
 
   // Game Profile Endpoints
-  static const String bgmiProfile = '/players/me/bgmi';
-  static const String efootballProfile = '/players/me/efootball';
+  static const String bgmiProfile = '/players/me/game-profiles/bgmi';
+  static const String efootballProfile = '/players/me/game-profiles/efootball';
 
   // Search Endpoint
   static const String searchPlayers = '/players/search';
+
+  // Connection (invite / friend) Endpoints
+  static const String connections = '/connections';
+  static String sendInvite(int playerId) => '/connections/invite/$playerId';
+  static String acceptInvite(int connectionId) => '/connections/$connectionId/accept';
+  static String declineInvite(int connectionId) => '/connections/$connectionId/decline';
+
+  // Chat Endpoints
+  static const String chats = '/chats';
+  static String chatMessages(int friendId) => '/chats/$friendId/messages';
 }

@@ -24,7 +24,9 @@ public class PlayerMapper {
                 player.getLanguage(),
                 player.getCountry(),
                 bgmiResponse,
-                efootballResponse
+                efootballResponse,
+                player.getCreatedAt(),
+                player.getUpdatedAt()
         );
     }
 

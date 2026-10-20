@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
-import '../profile/profile_screen.dart';
+import '../main/main_screen.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -27,7 +27,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (success && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+        MaterialPageRoute(builder: (_) => const MainScreen()),
       );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

@@ -3,6 +3,7 @@ package com.example.gamify.repository;
 import com.example.gamify.entity.BgmiProfile;
 import com.example.gamify.entity.EfootballProfile;
 import com.example.gamify.entity.Player;
+import jakarta.persistence.criteria.Expression;
 import jakarta.persistence.criteria.Join;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
@@ -32,8 +33,10 @@ public class PlayerSpecification {
                 predicates.add(cb.equal(cb.lower(root.get("country")), country.toLowerCase()));
             }
 
+            // language holds a comma-separated list ("English, Hindi"); match one whole entry
             if (StringUtils.hasText(language)) {
-                predicates.add(cb.equal(cb.lower(root.get("language")), language.toLowerCase()));
+                Expression<String> paddedList = cb.concat(cb.concat(", ", cb.lower(root.get("language"))), ",");
+                predicates.add(cb.like(paddedList, "%, " + language.trim().toLowerCase() + ",%"));
             }
 
             if (StringUtils.hasText(bgmiRole)) {

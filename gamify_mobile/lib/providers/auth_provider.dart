@@ -78,14 +78,18 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<SecretQuestionResponse?> getSecretQuestion(String username) async {
+    _setLoading(true);
     try {
       final response = await _apiClient.dio.get(
-        '${ApiEndpoints.secretQuestion}/$username',
+        ApiEndpoints.secretQuestion,
+        queryParameters: {'username': username},
       );
+      _errorMessage = null;
+      _setLoading(false);
       return SecretQuestionResponse.fromJson(response.data);
     } on DioException catch (e) {
       _errorMessage = e.response?.data['message'] ?? 'User not found';
-      notifyListeners();
+      _setLoading(false);
       return null;
     }
   }
