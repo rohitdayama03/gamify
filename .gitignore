@@ -1,0 +1,8 @@
+# macOS folder metadata
+.DS_Store
+
+# Firebase server credentials (service account keys) must never be committed.
+# They live in GitHub secrets (FIREBASE_SERVICE_ACCOUNT) and outside the repo locally.
+# google-services.json is NOT ignored: it only identifies the Firebase project and ships inside the APK.
+*firebase-adminsdk*.json
+*service-account*.json

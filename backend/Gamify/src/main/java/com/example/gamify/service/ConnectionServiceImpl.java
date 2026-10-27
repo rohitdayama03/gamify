@@ -9,12 +9,15 @@ import com.example.gamify.exception.ResourceNotFoundException;
 import com.example.gamify.mapper.ConnectionMapper;
 import com.example.gamify.repository.PlayerConnectionRepository;
 import com.example.gamify.repository.PlayerRepository;
+import com.example.gamify.notification.PushNotification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +26,7 @@ public class ConnectionServiceImpl implements ConnectionService {
     private final PlayerRepository playerRepository;
     private final PlayerConnectionRepository connectionRepository;
     private final ConnectionMapper connectionMapper;
+    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional(readOnly = true)
@@ -69,7 +73,16 @@ public class ConnectionServiceImpl implements ConnectionService {
                 .status(ConnectionStatus.PENDING)
                 .build();
 
-        return connectionMapper.toConnectionResponse(connectionRepository.save(connection), me);
+        PlayerConnection saved = connectionRepository.save(connection);
+        events.publishEvent(new PushNotification(
+                receiver.getPlayerId(),
+                "New request",
+                me.getUsername() + " wants to connect with you",
+                PushNotification.CHANNEL_REQUESTS,
+                "request-" + me.getPlayerId(),
+                Map.of("type", "request_received", "playerId", String.valueOf(me.getPlayerId()), "username", me.getUsername())
+        ));
+        return connectionMapper.toConnectionResponse(saved, me);
     }
 
     @Override
@@ -114,7 +127,20 @@ public class ConnectionServiceImpl implements ConnectionService {
 
         connection.setStatus(newStatus);
         connection.setRespondedAt(OffsetDateTime.now());
-        return connectionMapper.toConnectionResponse(connectionRepository.save(connection), me);
+        PlayerConnection saved = connectionRepository.save(connection);
+        // Tell the sender good news only; a declined request stays quiet
+        if (newStatus == ConnectionStatus.ACCEPTED) {
+            Player sender = connection.getSender();
+            events.publishEvent(new PushNotification(
+                    sender.getPlayerId(),
+                    "Request accepted",
+                    me.getUsername() + " accepted your request. Say hi!",
+                    PushNotification.CHANNEL_REQUESTS,
+                    "accepted-" + me.getPlayerId(),
+                    Map.of("type", "request_accepted", "playerId", String.valueOf(me.getPlayerId()), "username", me.getUsername())
+            ));
+        }
+        return connectionMapper.toConnectionResponse(saved, me);
     }
 
     private Player findPlayer(String username) {

@@ -25,14 +25,6 @@ class InboxScreenState extends State<InboxScreen>
   late final TabController _tabs = TabController(length: 2, vsync: this);
   bool _showSent = false;
 
-  void showTab(int index) => _tabs.animateTo(index);
-
-  /// Opens Requests on the Received or Sent list
-  void showRequests({bool sent = false}) {
-    _tabs.animateTo(InboxScreen.requestsTab);
-    setState(() => _showSent = sent);
-  }
-
   @override
   void dispose() {
     _tabs.dispose();

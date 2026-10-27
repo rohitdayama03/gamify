@@ -1,10 +1,22 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <!-- Release builds must reach the backend API; debug/profile manifests only cover development -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Android 13+ asks the player before showing notifications -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <application
         android:label="Gamify"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <!-- Push notification look: status-bar icon, mint accent, and the channel used when none is given -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/notification_accent" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="messages" />
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -42,6 +54,11 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Lets the app open news articles in the browser (Android 11+ package visibility) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
         </intent>
     </queries>
 </manifest>

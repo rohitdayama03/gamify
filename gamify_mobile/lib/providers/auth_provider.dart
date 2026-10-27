@@ -3,6 +3,7 @@ import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/api/api_error.dart';
+import '../core/notifications/push_notifications.dart';
 import '../core/storage/secure_storage.dart';
 import '../models/auth_model.dart';
 
@@ -121,6 +122,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   Future<void> logout() async {
+    // Before the login token is discarded, so the server can stop pushing to this phone
+    await PushNotifications.instance.stop();
     try {
       await _apiClient.dio.post(ApiEndpoints.logout);
     } catch (_) {}

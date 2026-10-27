@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/notifications/push_notifications.dart';
 import '../../models/game.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connection_provider.dart';
@@ -33,7 +34,6 @@ class MainScreen extends StatefulWidget {
 class _MainScreenState extends State<MainScreen> {
   // How often to check for new messages and requests so the badges stay current
   static const Duration _refreshInterval = Duration(seconds: 15);
-  final _inboxKey = GlobalKey<InboxScreenState>();
   final _discoverKey = GlobalKey<DiscoverScreenState>();
   late int _currentIndex = widget.initialTab;
   Timer? _refreshTimer;
@@ -43,6 +43,10 @@ class _MainScreenState extends State<MainScreen> {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
     _refreshTimer = Timer.periodic(_refreshInterval, (_) => _refresh());
+    // Signed in: register this phone for pushes; a push arriving while open refreshes badges right away
+    PushNotifications.instance.start(onActivity: () {
+      if (mounted) _refresh();
+    });
   }
 
   @override
@@ -65,14 +69,6 @@ class _MainScreenState extends State<MainScreen> {
   void _findPlayers(Game game) {
     _selectTab(MainScreen.discoverTab);
     _discoverKey.currentState?.selectGame(game);
-  }
-
-  void _openRequests({bool sent = false}) {
-    _selectTab(MainScreen.inboxTab);
-    // The inbox may not be built yet the first time, so switch its tab after this frame
-    WidgetsBinding.instance.addPostFrameCallback(
-      (_) => _inboxKey.currentState?.showRequests(sent: sent),
-    );
   }
 
   @override
@@ -126,10 +122,9 @@ class _MainScreenState extends State<MainScreen> {
           children: [
             HomeScreen(
               onFindPlayers: _findPlayers,
-              onOpenRequests: _openRequests,
             ),
             DiscoverScreen(key: _discoverKey),
-            InboxScreen(key: _inboxKey),
+            const InboxScreen(),
             const ProfileScreen(),
           ],
         ),

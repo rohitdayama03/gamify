@@ -27,6 +27,13 @@ class ApiEndpoints {
   static String declineInvite(int connectionId) => '/connections/$connectionId/decline';
   static String cancelInvite(int connectionId) => '/connections/$connectionId';
 
+  // Push notification devices (Firebase tokens)
+  static const String devices = '/devices';
+  static const String unregisterDevice = '/devices/unregister';
+
+  // Gaming news headlines
+  static const String news = '/news';
+
   // Chat Endpoints
   static const String chats = '/chats';
   static String chatMessages(int friendId) => '/chats/$friendId/messages';

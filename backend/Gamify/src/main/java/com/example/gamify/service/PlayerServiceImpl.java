@@ -10,6 +10,7 @@ import com.example.gamify.exception.ResourceNotFoundException;
 import com.example.gamify.mapper.PlayerMapper;
 import com.example.gamify.repository.BgmiProfileRepository;
 import com.example.gamify.repository.ChatMessageRepository;
+import com.example.gamify.repository.DeviceTokenRepository;
 import com.example.gamify.repository.EfootballProfileRepository;
 import com.example.gamify.repository.GtaProfileRepository;
 import com.example.gamify.repository.PlayerConnectionRepository;
@@ -28,6 +29,7 @@ public class PlayerServiceImpl implements PlayerService {
     private final EfootballProfileRepository efootballProfileRepository;
     private final PlayerConnectionRepository connectionRepository;
     private final ChatMessageRepository chatMessageRepository;
+    private final DeviceTokenRepository deviceTokenRepository;
     private final PlayerMapper playerMapper;
 
     @Override
@@ -69,6 +71,7 @@ public class PlayerServiceImpl implements PlayerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Player not found with username: " + username));
         // Invites and messages reference the player by foreign key, so remove them first
         chatMessageRepository.deleteAllInvolving(player);
+        deviceTokenRepository.deleteAllByPlayer(player);
         connectionRepository.deleteAllInvolving(player);
         playerRepository.delete(player);
     }

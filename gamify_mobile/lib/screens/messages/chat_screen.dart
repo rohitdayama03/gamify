@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/notifications/push_notifications.dart';
 import '../../models/chat_model.dart';
 import '../../models/connection_model.dart';
 import '../../providers/chat_provider.dart';
@@ -41,10 +42,16 @@ class _ChatScreenState extends State<ChatScreen> {
     _textController.addListener(() => setState(() {})); // toggles the send button
     _loadInitial();
     _pollTimer = Timer.periodic(_pollInterval, (_) => _pollNewer());
+    // This chat is on screen: don't pop up its messages, and clear any notification already showing
+    PushNotifications.openChatPlayerId = widget.friend.playerId;
+    PushNotifications.instance.clearChat(widget.friend.playerId);
   }
 
   @override
   void dispose() {
+    if (PushNotifications.openChatPlayerId == widget.friend.playerId) {
+      PushNotifications.openChatPlayerId = null;
+    }
     _pollTimer?.cancel();
     _textController.dispose();
     _scrollController.dispose();

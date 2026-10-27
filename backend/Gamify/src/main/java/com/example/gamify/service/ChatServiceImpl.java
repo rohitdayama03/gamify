@@ -11,7 +11,9 @@ import com.example.gamify.mapper.ConnectionMapper;
 import com.example.gamify.repository.ChatMessageRepository;
 import com.example.gamify.repository.PlayerConnectionRepository;
 import com.example.gamify.repository.PlayerRepository;
+import com.example.gamify.notification.PushNotification;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ChatServiceImpl implements ChatService {
 
+    // Longest message text shown in a notification
+    private static final int PREVIEW_LENGTH = 150;
+
     private static final int PAGE_SIZE = 50;
 
     private final PlayerRepository playerRepository;
@@ -34,6 +39,7 @@ public class ChatServiceImpl implements ChatService {
     private final ChatMessageRepository messageRepository;
     private final ChatMapper chatMapper;
     private final ConnectionMapper connectionMapper;
+    private final ApplicationEventPublisher events;
 
     @Override
     @Transactional(readOnly = true)
@@ -100,7 +106,21 @@ public class ChatServiceImpl implements ChatService {
                 .content(content.trim())
                 .build();
 
-        return chatMapper.toChatMessageResponse(messageRepository.save(message), me);
+        ChatMessage saved = messageRepository.save(message);
+        // One notification per chat: a newer message replaces the previous one on the phone
+        events.publishEvent(new PushNotification(
+                friend.getPlayerId(),
+                me.getUsername(),
+                preview(saved.getContent()),
+                PushNotification.CHANNEL_MESSAGES,
+                "chat-" + me.getPlayerId(),
+                Map.of("type", "message", "playerId", String.valueOf(me.getPlayerId()), "username", me.getUsername())
+        ));
+        return chatMapper.toChatMessageResponse(saved, me);
+    }
+
+    private static String preview(String content) {
+        return content.length() <= PREVIEW_LENGTH ? content : content.substring(0, PREVIEW_LENGTH) + "…";
     }
 
     private Player findFriend(Player me, Long friendId) {
