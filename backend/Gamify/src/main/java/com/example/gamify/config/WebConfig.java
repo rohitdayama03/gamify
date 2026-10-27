@@ -3,6 +3,7 @@ package com.example.gamify.config;
 import com.example.gamify.controller.PlayerSearchController;
 import com.example.gamify.security.CurrentUsernameArgumentResolver;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
@@ -16,16 +17,19 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final CurrentUsernameArgumentResolver currentUsernameArgumentResolver;
 
+    @Value("${app.cors.allowed-origins}")
+    private String[] allowedOrigins;
+
     @Override
     public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(currentUsernameArgumentResolver);
     }
 
-    // Allows the Flutter web build (served from a random localhost port) to call the API
+    // Allows the Flutter web build to call the API; locally it's served from a random localhost port
     @Override
     public void addCorsMappings(CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOriginPatterns("http://localhost:*", "http://127.0.0.1:*")
+                .allowedOriginPatterns(allowedOrigins)
                 .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .exposedHeaders(PlayerSearchController.MATCHED_GAME_HEADER);

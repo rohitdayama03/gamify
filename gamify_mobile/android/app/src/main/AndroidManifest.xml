@@ -1,4 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Release builds must reach the backend API; debug/profile manifests only cover development -->
+    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:label="Gamify"
         android:name="${applicationName}"

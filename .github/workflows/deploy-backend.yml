@@ -1,0 +1,160 @@
+# Builds the Spring Boot backend and deploys it to an EC2 host as a plain JAR.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   EC2_HOST              Public DNS or IP of the EC2 instance
+#   EC2_SSH_PRIVATE_KEY   Private key (PEM) for the ec2-user account
+#   DB_URL                JDBC URL, e.g. jdbc:postgresql://<rds-endpoint>:5432/gamify_db
+#   DB_USERNAME           Database user
+#   DB_PASSWORD           Database password
+#   JWT_SECRET            256-bit hex key used to sign login tokens (the app won't start without it)
+# Optional:
+#   CORS_ALLOWED_ORIGINS  Comma-separated origins allowed to call the API from a browser,
+#                         e.g. https://app.example.com (only needed for the Flutter web build)
+#
+# The EC2 instance needs Java 17+ installed (Amazon Linux: sudo dnf install -y java-17-amazon-corretto-headless)
+# and port 8080 open to clients in its security group.
+name: Deploy Backend
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+# Never run two deploys against the same server at once
+concurrency:
+  group: deploy-backend
+  cancel-in-progress: false
+
+jobs:
+  deploy-backend:
+    name: Deploy backend to EC2
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_PATH: backend/Gamify
+      TARGET_JAR: backend/Gamify/target/Gamify-0.0.1-SNAPSHOT.jar
+      EC2_USER: ec2-user
+      APP_DIR: /home/ec2-user/gamify-backend
+      APP_PORT: '8080'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Build backend
+        run: |
+          cd $PROJECT_PATH
+          chmod +x mvnw
+          ./mvnw -B clean package -DskipTests
+
+      - name: Prepare SSH key and app settings
+        env:
+          EC2_SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          DB_URL: ${{ secrets.DB_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
+        run: |
+          echo "$EC2_SSH_PRIVATE_KEY" > ec2_key.pem
+          chmod 600 ec2_key.pem
+
+          # Fail early with a clear message instead of a backend that won't start
+          for name in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "::error::Missing repository secret $name"
+              exit 1
+            fi
+          done
+
+          # %q shell-escapes each value, so passwords with quotes or spaces survive intact
+          {
+            printf 'export DB_URL=%q\n' "$DB_URL"
+            printf 'export DB_USERNAME=%q\n' "$DB_USERNAME"
+            printf 'export DB_PASSWORD=%q\n' "$DB_PASSWORD"
+            printf 'export JWT_SECRET=%q\n' "$JWT_SECRET"
+            if [ -n "$CORS_ALLOWED_ORIGINS" ]; then
+              printf 'export CORS_ALLOWED_ORIGINS=%q\n' "$CORS_ALLOWED_ORIGINS"
+            fi
+          } > app.env
+          chmod 600 app.env
+
+      - name: Upload JAR and settings to EC2
+        run: |
+          SSH_OPTS="-o StrictHostKeyChecking=no -i ec2_key.pem"
+          ssh $SSH_OPTS $EC2_USER@${{ secrets.EC2_HOST }} "mkdir -p $APP_DIR"
+
+          echo "Uploading JAR to EC2..."
+          scp $SSH_OPTS $TARGET_JAR $EC2_USER@${{ secrets.EC2_HOST }}:$APP_DIR/app.jar.new
+          scp $SSH_OPTS app.env $EC2_USER@${{ secrets.EC2_HOST }}:$APP_DIR/app.env
+
+      - name: Restart app on EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no -i ec2_key.pem $EC2_USER@${{ secrets.EC2_HOST }} \
+            "bash -s -- '$APP_DIR' '$APP_PORT'" << 'EOF'
+          set -e
+          APP_DIR="$1"
+          APP_PORT="$2"
+          cd "$APP_DIR"
+          chmod 600 app.env
+
+          if ! command -v java > /dev/null; then
+            echo "Java is not installed on this host. Install Java 17+ and re-run the deploy."
+            exit 1
+          fi
+
+          echo "Stopping old app..."
+          pkill -f "java.*$APP_DIR/app.jar" || true
+          # Give it up to 30s to shut down cleanly before the new one claims the port
+          for i in $(seq 1 30); do
+            pgrep -f "java.*$APP_DIR/app.jar" > /dev/null || break
+            sleep 1
+          done
+          pkill -9 -f "java.*$APP_DIR/app.jar" || true
+
+          if command -v lsof > /dev/null; then
+            PID=$(lsof -t -i:"$APP_PORT" || true)
+            if [ -n "$PID" ]; then
+              echo "Killing PID $PID still holding port $APP_PORT..."
+              kill -9 $PID
+            fi
+          fi
+
+          echo "Swapping in the new JAR (previous one kept as app.jar.prev)..."
+          if [ -f app.jar ]; then mv app.jar app.jar.prev; fi
+          mv app.jar.new app.jar
+
+          echo "Starting new app..."
+          set -a; . ./app.env; set +a
+          nohup java -jar "$APP_DIR/app.jar" --server.port="$APP_PORT" > "$APP_DIR/app.log" 2>&1 &
+
+          # Any HTTP status at all means the API is up and answering
+          echo "Waiting for the API to respond..."
+          for i in $(seq 1 60); do
+            CODE=$(curl -s -o /dev/null -w '%{http_code}' "http://localhost:$APP_PORT/api/v1/players/search" || true)
+            if [ "$CODE" != "000" ]; then
+              echo "App started (HTTP $CODE after ${i}s)."
+              exit 0
+            fi
+            sleep 1
+          done
+
+          echo "App did not respond within 60s. Last log lines:"
+          tail -n 60 "$APP_DIR/app.log"
+          exit 1
+          EOF
+
+      - name: Remove SSH key and settings from runner
+        if: always()
+        run: rm -f ec2_key.pem app.env
