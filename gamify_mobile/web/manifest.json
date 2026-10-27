@@ -1,11 +1,11 @@
 {
-    "name": "gamify_mobile",
-    "short_name": "gamify_mobile",
+    "name": "GAMIFY",
+    "short_name": "GAMIFY",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#0A0C0B",
+    "theme_color": "#4AF2A1",
+    "description": "Find players for GTA Online, BGMI and eFootball.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

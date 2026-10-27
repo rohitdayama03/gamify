@@ -1,12 +1,17 @@
-import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../storage/secure_storage.dart';
 
 class ApiClient {
   late final Dio dio;
   final SecureStorage _storage = SecureStorage();
 
-  static const String baseUrl = 'http://192.168.1.15:8080/api/v1';
+  // Override with --dart-define=API_BASE_URL=... (e.g. another port or a deployed server).
+  // Otherwise web runs in a browser on the same machine as the backend; physical devices use the LAN IP
+  static const String baseUrl = String.fromEnvironment(
+    'API_BASE_URL',
+    defaultValue: kIsWeb ? 'http://localhost:8080/api/v1' : 'http://192.168.1.15:8080/api/v1',
+  );
   // static String get baseUrl {
   //   if (Platform.isAndroid) {
   //     return 'http://10.0.2.2:8080/api/v1'; // Android Emulator

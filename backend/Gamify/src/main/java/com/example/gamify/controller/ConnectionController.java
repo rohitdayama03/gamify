@@ -39,6 +39,15 @@ public class ConnectionController {
         return ResponseEntity.ok(connectionService.acceptInvite(currentUsername, connectionId));
     }
 
+    // Cancel a pending invite the logged-in player sent
+    @DeleteMapping("/{connectionId}")
+    public ResponseEntity<Void> cancelInvite(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long connectionId) {
+        connectionService.cancelInvite(currentUsername, connectionId);
+        return ResponseEntity.noContent().build();
+    }
+
     // Decline an invite received by the logged-in player; the sender can never invite again
     @PostMapping("/{connectionId}/decline")
     public ResponseEntity<ConnectionResponse> declineInvite(

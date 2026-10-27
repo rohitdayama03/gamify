@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import '../core/api/api_error.dart';
 import '../core/storage/secure_storage.dart';
 import '../models/auth_model.dart';
 
@@ -36,7 +37,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Login failed';
+      _errorMessage = apiErrorMessage(e, 'Login failed');
       _setLoading(false);
       return false;
     }
@@ -44,12 +45,14 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> register({
     required String username,
+    required String email,
     required String password,
     String? playerBio,
     String? language,
     String? country,
     required String secretQuestion,
     required String secretAnswer,
+    required bool acceptedTerms,
   }) async {
     _setLoading(true);
     try {
@@ -57,7 +60,9 @@ class AuthProvider extends ChangeNotifier {
         ApiEndpoints.register,
         data: {
           'username': username,
+          'email': email,
           'password': password,
+          'acceptedTerms': acceptedTerms,
           'playerBio': playerBio,
           'language': language,
           'country': country,
@@ -71,7 +76,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Registration failed';
+      _errorMessage = apiErrorMessage(e, 'Registration failed');
       _setLoading(false);
       return false;
     }
@@ -88,7 +93,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return SecretQuestionResponse.fromJson(response.data);
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'User not found';
+      _errorMessage = apiErrorMessage(e, 'User not found');
       _setLoading(false);
       return null;
     }
@@ -109,7 +114,7 @@ class AuthProvider extends ChangeNotifier {
       _setLoading(false);
       return true;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Password reset failed';
+      _errorMessage = apiErrorMessage(e, 'Password reset failed');
       _setLoading(false);
       return false;
     }

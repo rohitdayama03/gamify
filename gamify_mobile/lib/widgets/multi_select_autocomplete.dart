@@ -68,7 +68,6 @@ class _MultiSelectAutocompleteState extends State<MultiSelectAutocomplete> {
               decoration: InputDecoration(
                 labelText: widget.label,
                 hintText: _isFull ? 'Maximum ${widget.maxSelections} selected' : 'Start typing to search',
-                border: const OutlineInputBorder(),
                 suffixIcon: const Icon(Icons.search),
               ),
             );

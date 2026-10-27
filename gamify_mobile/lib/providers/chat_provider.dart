@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import '../core/api/api_error.dart';
 import '../models/chat_model.dart';
 
 class ChatProvider extends ChangeNotifier {
@@ -28,7 +29,7 @@ class ChatProvider extends ChangeNotifier {
       _conversations = data.map((e) => Conversation.fromJson(e)).toList();
       _errorMessage = null;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load conversations';
+      _errorMessage = apiErrorMessage(e, 'Failed to load conversations');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -50,7 +51,7 @@ class ChatProvider extends ChangeNotifier {
       _errorMessage = null;
       return data.map((e) => ChatMessage.fromJson(e)).toList();
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load messages';
+      _errorMessage = apiErrorMessage(e, 'Failed to load messages');
       return null;
     }
   }
@@ -64,7 +65,7 @@ class ChatProvider extends ChangeNotifier {
       _errorMessage = null;
       return ChatMessage.fromJson(response.data);
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Message not sent';
+      _errorMessage = apiErrorMessage(e, 'Message not sent');
       return null;
     }
   }

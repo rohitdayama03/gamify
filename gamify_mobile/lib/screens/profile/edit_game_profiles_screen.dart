@@ -1,11 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../models/game.dart';
 import '../../providers/player_provider.dart';
+import 'edit_gta_profile_screen.dart';
 
 class EditGameProfilesScreen extends StatefulWidget {
   final int initialTab;
   const EditGameProfilesScreen({super.key, this.initialTab = 0});
+
+  /// Opens the profile editor for [game]; GTA Online has its own screen, BGMI and eFootball share this one
+  static Future<void> open(BuildContext context, Game game) {
+    final screen = switch (game) {
+      Game.gta => const EditGtaProfileScreen(),
+      Game.bgmi => const EditGameProfilesScreen(initialTab: 0),
+      Game.efootball => const EditGameProfilesScreen(initialTab: 1),
+    };
+    return Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+  }
 
   @override
   State<EditGameProfilesScreen> createState() => _EditGameProfilesScreenState();
@@ -130,17 +142,17 @@ class _EditGameProfilesScreenState extends State<EditGameProfilesScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _bgmiId, decoration: const InputDecoration(labelText: 'BGMI In-Game ID *', border: OutlineInputBorder())),
+                  TextField(controller: _bgmiId, decoration: const InputDecoration(labelText: 'BGMI In-Game ID *')),
                   const SizedBox(height: 12),
-                  TextField(controller: _role, decoration: const InputDecoration(labelText: 'Current Role (e.g. IGL, Assaulter)', border: OutlineInputBorder())),
+                  TextField(controller: _role, decoration: const InputDecoration(labelText: 'Current Role (e.g. IGL, Assaulter)')),
                   const SizedBox(height: 12),
-                  TextField(controller: _exp, decoration: const InputDecoration(labelText: 'Experience (e.g. 2 Years)', border: OutlineInputBorder())),
+                  TextField(controller: _exp, decoration: const InputDecoration(labelText: 'Experience (e.g. 2 Years)')),
                   const SizedBox(height: 12),
-                  TextField(controller: _time, decoration: const InputDecoration(labelText: 'Available Time (e.g. 8 PM - 11 PM)', border: OutlineInputBorder())),
+                  TextField(controller: _time, decoration: const InputDecoration(labelText: 'Available Time (e.g. 8 PM - 11 PM)')),
                   const SizedBox(height: 12),
-                  TextField(controller: _achievements, maxLines: 3, decoration: const InputDecoration(labelText: 'Achievements', alignLabelWithHint: true, border: OutlineInputBorder())),
+                  TextField(controller: _achievements, maxLines: 3, decoration: const InputDecoration(labelText: 'Achievements', alignLabelWithHint: true)),
                   const SizedBox(height: 12),
-                  TextField(controller: _lookingFor, decoration: const InputDecoration(labelText: 'Looking For (e.g. Esports Squad)', border: OutlineInputBorder())),
+                  TextField(controller: _lookingFor, decoration: const InputDecoration(labelText: 'Looking For (e.g. Esports Squad)')),
                   const SizedBox(height: 20),
                   _saveButton('Save BGMI Profile', _saveBgmi),
                   if (player?.bgmiProfile != null)
@@ -152,9 +164,9 @@ class _EditGameProfilesScreenState extends State<EditGameProfilesScreen> {
               padding: const EdgeInsets.all(16.0),
               child: Column(
                 children: [
-                  TextField(controller: _efootballId, decoration: const InputDecoration(labelText: 'E-Football ID *', border: OutlineInputBorder())),
+                  TextField(controller: _efootballId, decoration: const InputDecoration(labelText: 'E-Football ID *')),
                   const SizedBox(height: 12),
-                  TextField(controller: _highTier, decoration: const InputDecoration(labelText: 'Highest Tier (e.g. Div 1)', border: OutlineInputBorder())),
+                  TextField(controller: _highTier, decoration: const InputDecoration(labelText: 'Highest Tier (e.g. Div 1)')),
                   const SizedBox(height: 20),
                   _saveButton('Save E-Football Profile', _saveEfootball),
                   if (player?.efootballProfile != null)
@@ -173,8 +185,8 @@ class _EditGameProfilesScreenState extends State<EditGameProfilesScreen> {
       style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50), backgroundColor: AppColors.primary),
       onPressed: _saving ? null : onPressed,
       child: _saving
-          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-          : Text(label, style: const TextStyle(color: Colors.white)),
+          ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary))
+          : Text(label, style: const TextStyle(color: AppColors.onPrimary)),
     );
   }
 

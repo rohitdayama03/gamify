@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
+import '../core/api/api_error.dart';
 import '../models/connection_model.dart';
 
 /// How the logged-in player relates to another player.
@@ -29,6 +30,22 @@ class ConnectionProvider extends ChangeNotifier {
       .where((c) => c.direction == ConnectionDirection.sent && c.status == ConnectionStatus.accepted)
       .toList();
 
+  // Every invite I sent: still-pending ones first, then the newest answers
+  List<ConnectionResponse> get sentInvites {
+    final sent = _connections.where((c) => c.direction == ConnectionDirection.sent).toList();
+    sent.sort((a, b) {
+      final pendingFirst = (a.status == ConnectionStatus.pending ? 0 : 1) - (b.status == ConnectionStatus.pending ? 0 : 1);
+      if (pendingFirst != 0) return pendingFirst;
+      final aTime = a.respondedAt ?? a.createdAt ?? DateTime(0);
+      final bTime = b.respondedAt ?? b.createdAt ?? DateTime(0);
+      return bTime.compareTo(aTime);
+    });
+    return sent;
+  }
+
+  int get pendingSentCount =>
+      _connections.where((c) => c.direction == ConnectionDirection.sent && c.status == ConnectionStatus.pending).length;
+
   List<PlayerSummary> get friends => _connections
       .where((c) => c.status == ConnectionStatus.accepted)
       .map((c) => c.otherPlayer)
@@ -54,6 +71,15 @@ class ConnectionProvider extends ChangeNotifier {
     return null;
   }
 
+  ConnectionResponse? pendingInviteTo(int playerId) {
+    for (final c in _connections) {
+      if (c.direction == ConnectionDirection.sent && c.status == ConnectionStatus.pending && c.otherPlayer.playerId == playerId) {
+        return c;
+      }
+    }
+    return null;
+  }
+
   Future<void> fetchConnections() async {
     _isLoading = true;
     notifyListeners();
@@ -63,7 +89,7 @@ class ConnectionProvider extends ChangeNotifier {
       _connections = data.map((e) => ConnectionResponse.fromJson(e)).toList();
       _errorMessage = null;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? 'Failed to load invites';
+      _errorMessage = apiErrorMessage(e, 'Failed to load invites');
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -79,6 +105,9 @@ class ConnectionProvider extends ChangeNotifier {
   Future<bool> declineInvite(int connectionId) =>
       _mutate(connectionId, () => _apiClient.dio.post(ApiEndpoints.declineInvite(connectionId)), 'Failed to decline invite');
 
+  Future<bool> cancelInvite(int connectionId) =>
+      _mutate(connectionId, () => _apiClient.dio.delete(ApiEndpoints.cancelInvite(connectionId)), 'Failed to cancel request');
+
   bool isInviting(int playerId) => _busyIds.contains(-playerId);
 
   // Runs a request, then reloads all connections so every screen shows the new state.
@@ -92,7 +121,7 @@ class ConnectionProvider extends ChangeNotifier {
       await fetchConnections();
       return true;
     } on DioException catch (e) {
-      _errorMessage = e.response?.data['message'] ?? fallbackError;
+      _errorMessage = apiErrorMessage(e, fallbackError);
       // Our view was stale (e.g. they already invited us); refresh so the UI matches the server
       await fetchConnections();
       return false;

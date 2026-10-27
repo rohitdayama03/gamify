@@ -138,7 +138,7 @@ class _ChatScreenState extends State<ChatScreen> {
               backgroundColor: AppColors.primary,
               child: Text(
                 friend.username.isEmpty ? '?' : friend.username[0].toUpperCase(),
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold),
               ),
             ),
             const SizedBox(width: 10),
@@ -263,6 +263,8 @@ class _MessageBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final mine = message.fromMe;
+    // Dark text on the mint bubble, light text on the dark one
+    final textColor = mine ? AppColors.onPrimary : AppColors.textPrimary;
     return Align(
       alignment: mine ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
@@ -272,18 +274,19 @@ class _MessageBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: mine ? AppColors.primary : AppColors.cardBackground,
           borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(16),
-            topRight: const Radius.circular(16),
-            bottomLeft: Radius.circular(mine ? 16 : 4),
-            bottomRight: Radius.circular(mine ? 4 : 16),
+            topLeft: const Radius.circular(AppRadius.card),
+            topRight: const Radius.circular(AppRadius.card),
+            bottomLeft: Radius.circular(mine ? AppRadius.card : 0),
+            bottomRight: Radius.circular(mine ? 0 : AppRadius.card),
           ),
+          border: mine ? null : Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            SelectableText(message.content, style: const TextStyle(color: Colors.white, fontSize: 15)),
+            SelectableText(message.content, style: TextStyle(color: textColor, fontSize: 15)),
             const SizedBox(height: 2),
-            Text(time, style: TextStyle(color: Colors.white.withValues(alpha: 0.7), fontSize: 11)),
+            Text(time, style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11)),
           ],
         ),
       ),

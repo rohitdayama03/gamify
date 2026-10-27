@@ -37,6 +37,7 @@ dependencies:
   dio: ^5.11.1
   flutter_secure_storage: ^11.2.0
   provider: ^6.1.5+1
+  google_fonts: ^9.0.0
 
 dev_dependencies:
   flutter_test:
@@ -48,6 +49,7 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -59,6 +61,13 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+
+  # Game logos (from Wikimedia Commons, marked public domain; names and logos remain their publishers' trademarks)
+  assets:
+    - assets/logos/
+    # App logo: full icon (Welcome screen) and the controller mark on its own (headers)
+    - assets/branding/app_icon.png
+    - assets/branding/logo_mark.png
 
   # To add assets to your application, add an assets section, like this:
   # assets:
@@ -90,3 +99,23 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# App launcher and browser icons, generated from one source image with:
+#   dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: "assets/branding/app_icon_1024.png"
+  android: true
+  # Android 8+ launchers mask icons into circles/squircles; a plain square icon gets shrunk into a
+  # white badge, so provide an adaptive icon: the controller mark over a matching dark background
+  adaptive_icon_background: "#101A1C"
+  adaptive_icon_foreground: "assets/branding/android_adaptive_foreground.png"
+  # The foreground image already keeps the mark inside the safe zone
+  adaptive_icon_foreground_inset: 0
+  ios: true
+  # The App Store rejects icons with transparency
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: "assets/branding/app_icon_1024.png"
+    background_color: "#0A0C0B"
+    theme_color: "#4AF2A1"

@@ -1,6 +1,7 @@
 package com.example.gamify.service;
 
 import com.example.gamify.dto.PlayerResponse;
+import com.example.gamify.entity.Game;
 import com.example.gamify.entity.Player;
 import com.example.gamify.mapper.PlayerMapper;
 import com.example.gamify.repository.PlayerRepository;
@@ -22,16 +23,24 @@ public class PlayerSearchServiceImpl implements PlayerSearchService {
     @Override
     @Transactional(readOnly = true)
     public Page<PlayerResponse> searchPlayers(
+            String searchText,
+            Game matchedGame,
             String username,
             String country,
             String language,
+            Game game,
+            String gtaPlatform,
+            String gtaActivity,
             String bgmiRole,
             String efootballTier,
             Pageable pageable) {
 
         Specification<Player> spec = PlayerSpecification.filterPlayers(
-                username, country, language, bgmiRole, efootballTier
+                username, country, language, game, gtaPlatform, gtaActivity, bgmiRole, efootballTier
         );
+        if (searchText != null && !searchText.isBlank()) {
+            spec = spec.and(PlayerSpecification.matchesSearchText(searchText, matchedGame));
+        }
 
         Page<Player> playersPage = playerRepository.findAll(spec, pageable);
 

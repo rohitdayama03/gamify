@@ -65,14 +65,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
             TextFormField(
               initialValue: username,
               enabled: false,
-              decoration: const InputDecoration(labelText: 'Username', border: OutlineInputBorder(), helperText: 'Username cannot be changed'),
+              decoration: const InputDecoration(labelText: 'Username', helperText: 'Username cannot be changed'),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _bio,
               maxLines: 4,
               maxLength: 500,
-              decoration: const InputDecoration(labelText: 'Bio', alignLabelWithHint: true, border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: 'Bio', alignLabelWithHint: true),
             ),
             const SizedBox(height: 12),
             CountryDropdown(value: _country, onChanged: (value) => setState(() => _country = value)),
@@ -89,8 +89,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50), backgroundColor: AppColors.primary),
               onPressed: _saving ? null : _save,
               child: _saving
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : const Text('Save', style: TextStyle(color: Colors.white)),
+                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary))
+                  : const Text('Save', style: TextStyle(color: AppColors.onPrimary)),
             ),
           ],
         ),

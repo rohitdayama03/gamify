@@ -110,7 +110,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
               onSubmitted: (_) => _getQuestion(),
               decoration: InputDecoration(
                 labelText: 'Username',
-                border: const OutlineInputBorder(),
                 suffixIcon: _stepOneCompleted
                     ? IconButton(icon: const Icon(Icons.edit), tooltip: 'Change username', onPressed: _changeUsername)
                     : null,
@@ -123,7 +122,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   : ElevatedButton(
                       style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50), backgroundColor: AppColors.primary),
                       onPressed: _getQuestion,
-                      child: const Text('Get Security Question', style: TextStyle(color: Colors.white)),
+                      child: const Text('Get Security Question', style: TextStyle(color: AppColors.onPrimary)),
                     ),
             if (_stepOneCompleted) ...[
               Container(
@@ -142,18 +141,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              TextField(controller: _answerController, decoration: const InputDecoration(labelText: 'Your Answer', border: OutlineInputBorder())),
+              TextField(controller: _answerController, decoration: const InputDecoration(labelText: 'Your Answer')),
               const SizedBox(height: 16),
-              TextField(controller: _newPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'New Password', border: OutlineInputBorder())),
+              TextField(controller: _newPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'New Password')),
               const SizedBox(height: 16),
-              TextField(controller: _confirmPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm New Password', border: OutlineInputBorder())),
+              TextField(controller: _confirmPasswordController, obscureText: true, decoration: const InputDecoration(labelText: 'Confirm New Password')),
               const SizedBox(height: 24),
               auth.isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : ElevatedButton(
                       style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(50), backgroundColor: AppColors.primary),
                       onPressed: _resetPassword,
-                      child: const Text('Submit New Password', style: TextStyle(color: Colors.white)),
+                      child: const Text('Submit New Password', style: TextStyle(color: AppColors.onPrimary)),
                     ),
             ]
           ],

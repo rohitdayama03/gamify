@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/utils/time_format.dart';
 import '../../models/connection_model.dart';
 import '../../providers/connection_provider.dart';
+import '../player/player_profile_screen.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  /// Embedded in Inbox → Requests: no app bar and only pending invites
+  final bool embedded;
+
+  const NotificationsScreen({super.key, this.embedded = false});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -22,14 +27,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     // Pending invites first, then "accepted your invite" updates, newest first
     final items = <ConnectionResponse>[
       ...provider.pendingInvites,
-      if (_selected == 'All')
+      if (_selected == 'All' && !widget.embedded)
         ...(provider.acceptedSentInvites..sort((a, b) => _sortKey(b).compareTo(_sortKey(a)))),
     ];
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Notifications')),
+      appBar: widget.embedded ? null : AppBar(title: const Text('Notifications')),
       body: Column(
         children: [
+          // Category chips only apply to the full notifications page
+          if (!widget.embedded)
           SizedBox(
             height: 48,
             child: ListView.separated(
@@ -45,7 +52,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   selected: selected,
                   onSelected: (_) => setState(() => _selected = category),
                   selectedColor: AppColors.primary,
-                  labelStyle: TextStyle(color: selected ? Colors.white : AppColors.textPrimary, fontWeight: FontWeight.w600),
+                  labelStyle: TextStyle(color: selected ? AppColors.onPrimary : AppColors.textPrimary, fontWeight: FontWeight.w600),
                   showCheckmark: false,
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 );
@@ -87,7 +94,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         SizedBox(height: 12),
         Center(child: Text("You're all caught up", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
         SizedBox(height: 4),
-        Center(child: Text('Squad invites will show up here.', style: TextStyle(color: AppColors.textSecondary))),
+        Center(child: Text('Requests from other players will show up here.', style: TextStyle(color: AppColors.textSecondary))),
       ],
     );
   }
@@ -117,7 +124,10 @@ class _InviteTile extends StatelessWidget {
     final busy = Provider.of<ConnectionProvider>(context).isBusy(invite.id);
     final player = invite.otherPlayer;
 
-    return Container(
+    return OpenProfileOnTap(
+      playerId: player.playerId,
+      username: player.username,
+      child: Container(
       color: AppColors.cardBackground,
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -138,7 +148,7 @@ class _InviteTile extends StatelessWidget {
                   Text(player.playerBio!, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(color: AppColors.textSecondary)),
                 ],
                 const SizedBox(height: 2),
-                Text(_timeAgo(invite.createdAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                Text(timeAgo(invite.createdAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
                 const SizedBox(height: 10),
                 Row(
                   children: [
@@ -158,8 +168,8 @@ class _InviteTile extends StatelessWidget {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                       ),
                       child: busy
-                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                          : const Text('Accept', style: TextStyle(color: Colors.white)),
+                          ? const SizedBox(height: 16, width: 16, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.onPrimary))
+                          : const Text('Accept', style: TextStyle(color: AppColors.onPrimary)),
                     ),
                   ],
                 ),
@@ -168,7 +178,7 @@ class _InviteTile extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -179,7 +189,10 @@ class _AcceptedTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return OpenProfileOnTap(
+      playerId: connection.otherPlayer.playerId,
+      username: connection.otherPlayer.username,
+      child: Container(
       color: AppColors.cardBackground,
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -195,13 +208,13 @@ class _AcceptedTile extends StatelessWidget {
                   const TextSpan(text: ' accepted your invite. You are now friends.'),
                 ])),
                 const SizedBox(height: 2),
-                Text(_timeAgo(connection.respondedAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
+                Text(timeAgo(connection.respondedAt), style: const TextStyle(color: AppColors.textSecondary, fontSize: 12)),
               ],
             ),
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
@@ -215,17 +228,7 @@ class _Avatar extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor: AppColors.primary,
-      child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold)),
     );
   }
-}
-
-String _timeAgo(DateTime? time) {
-  if (time == null) return '';
-  final diff = DateTime.now().difference(time);
-  if (diff.inMinutes < 1) return 'just now';
-  if (diff.inHours < 1) return '${diff.inMinutes}m ago';
-  if (diff.inDays < 1) return '${diff.inHours}h ago';
-  if (diff.inDays < 7) return '${diff.inDays}d ago';
-  return '${(diff.inDays / 7).floor()}w ago';
 }

@@ -46,7 +46,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
             if (friends.isEmpty)
               const Padding(
                 padding: EdgeInsets.fromLTRB(20, 8, 20, 24),
-                child: Text('You can only message friends. Find players on Home and send them an invite.',
+                child: Text('You can only message friends. Find players on Discover and send them a request.',
                     style: TextStyle(color: AppColors.textSecondary)),
               )
             else
@@ -80,20 +80,20 @@ class _MessagesScreenState extends State<MessagesScreen> {
         .where((c) => query.isEmpty || c.friend.username.toLowerCase().contains(query))
         .toList();
 
+    // Shown inside Inbox, which provides the app bar
     return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
       floatingActionButton: FloatingActionButton(
         onPressed: _openNewMessageSheet,
         backgroundColor: AppColors.primary,
         tooltip: 'New message',
-        child: const Icon(Icons.edit, color: Colors.white),
+        child: const Icon(Icons.edit, color: AppColors.onPrimary),
       ),
       body: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 8),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
             child: SizedBox(
-              height: 40,
+              height: 48,
               child: TextField(
                 controller: _searchController,
                 onChanged: (_) => setState(() {}),
@@ -101,10 +101,7 @@ class _MessagesScreenState extends State<MessagesScreen> {
                   hintText: 'Search messages',
                   hintStyle: const TextStyle(color: AppColors.textSecondary),
                   prefixIcon: const Icon(Icons.search, color: AppColors.textSecondary, size: 20),
-                  filled: true,
-                  fillColor: AppColors.cardBackground,
                   contentPadding: EdgeInsets.zero,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide.none),
                 ),
               ),
             ),
@@ -227,7 +224,7 @@ class _Avatar extends StatelessWidget {
     return CircleAvatar(
       radius: 24,
       backgroundColor: AppColors.primary,
-      child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: Text(name.isEmpty ? '?' : name[0].toUpperCase(), style: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold)),
     );
   }
 }

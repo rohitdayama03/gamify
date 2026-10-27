@@ -9,4 +9,6 @@ public interface ConnectionService {
     ConnectionResponse sendInvite(String username, Long receiverId);
     ConnectionResponse acceptInvite(String username, Long connectionId);
     ConnectionResponse declineInvite(String username, Long connectionId);
+
+    void cancelInvite(String username, Long connectionId);
 }

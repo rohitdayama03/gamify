@@ -47,6 +47,22 @@ public class PlayerProfileController {
 
     // --- GAME PROFILES ---
 
+    // Upsert GTA Online Profile
+    @PutMapping("/me/game-profiles/gta")
+    public ResponseEntity<GtaProfileResponse> upsertGtaProfile(
+            @AuthenticationPrincipal String currentUsername,
+            @Valid @RequestBody GtaProfileRequest request) {
+        GtaProfileResponse response = playerService.upsertGtaProfile(currentUsername, request);
+        return ResponseEntity.ok(response);
+    }
+
+    // Delete GTA Online Profile
+    @DeleteMapping("/me/game-profiles/gta")
+    public ResponseEntity<Void> deleteGtaProfile(@AuthenticationPrincipal String currentUsername) {
+        playerService.deleteGtaProfile(currentUsername);
+        return ResponseEntity.noContent().build();
+    }
+
     // Upsert BGMI Profile
     @PutMapping("/me/game-profiles/bgmi")
     public ResponseEntity<BgmiProfileResponse> upsertBgmiProfile(

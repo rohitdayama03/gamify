@@ -24,6 +24,10 @@ public class Player {
     @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
+    // Nullable at the DB level so accounts created before email was required still load
+    @Column(name = "email", unique = true, length = 255)
+    private String email;
+
     @Column(name = "password", nullable = false)
     private String password;
 
@@ -37,6 +41,15 @@ public class Player {
     @Column(name = "country", length = 50)
     private String country;
 
+    // Comma-separated Game names chosen during onboarding, e.g. "GTA,BGMI"
+    @Column(name = "interested_games", length = 50)
+    private String interestedGames;
+
+    // Game the player last browsed, so returning users land on it
+    @Enumerated(EnumType.STRING)
+    @Column(name = "last_game", length = 20)
+    private Game lastGame;
+
     @Column(name = "secret_question", nullable = false)
     private String secretQuestion;
 
@@ -44,6 +57,9 @@ public class Player {
     private String secretAnswer;
 
     // One-to-One relationships with Game Profiles
+    @OneToOne(mappedBy = "player", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private GtaProfile gtaProfile;
+
     @OneToOne(mappedBy = "player", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private BgmiProfile bgmiProfile;
 

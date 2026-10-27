@@ -84,6 +84,23 @@ public class ConnectionServiceImpl implements ConnectionService {
         return respond(username, connectionId, ConnectionStatus.DECLINED);
     }
 
+    // The sender withdraws a pending invite. The row is deleted (not marked cancelled) so it
+    // disappears for the receiver and the sender can invite again later.
+    @Override
+    @Transactional
+    public void cancelInvite(String username, Long connectionId) {
+        Player me = findPlayer(username);
+        PlayerConnection connection = connectionRepository.findById(connectionId)
+                // Only the sender may cancel; hide other players' invites behind a 404
+                .filter(c -> c.getSender().getPlayerId().equals(me.getPlayerId()))
+                .orElseThrow(() -> new ResourceNotFoundException("Invite not found with ID: " + connectionId));
+
+        if (connection.getStatus() != ConnectionStatus.PENDING) {
+            throw new BadRequestException("This invite has already been " + connection.getStatus().name().toLowerCase());
+        }
+        connectionRepository.delete(connection);
+    }
+
     private ConnectionResponse respond(String username, Long connectionId, ConnectionStatus newStatus) {
         Player me = findPlayer(username);
         PlayerConnection connection = connectionRepository.findById(connectionId)

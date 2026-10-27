@@ -25,9 +25,15 @@ public class AuthServiceImpl implements AuthService {
         if (playerRepository.existsByUsername(request.username())) {
             throw new BadRequestException("Username is already taken");
         }
+        // Emails are compared case-insensitively, so store them lowercased
+        String email = request.email().trim().toLowerCase();
+        if (playerRepository.existsByEmail(email)) {
+            throw new BadRequestException("An account with this email already exists");
+        }
 
         Player player = Player.builder()
                 .username(request.username())
+                .email(email)
                 .password(passwordEncoder.encode(request.password()))
                 .playerBio(request.playerBio())
                 .language(request.language())
