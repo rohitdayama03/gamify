@@ -46,6 +46,12 @@ class ConnectionProvider extends ChangeNotifier {
   int get pendingSentCount =>
       _connections.where((c) => c.direction == ConnectionDirection.sent && c.status == ConnectionStatus.pending).length;
 
+  /// Friends with the time the friendship started (when the request was accepted)
+  List<({PlayerSummary friend, DateTime? since})> get friendships => _connections
+      .where((c) => c.status == ConnectionStatus.accepted)
+      .map((c) => (friend: c.otherPlayer, since: c.respondedAt ?? c.createdAt))
+      .toList();
+
   List<PlayerSummary> get friends => _connections
       .where((c) => c.status == ConnectionStatus.accepted)
       .map((c) => c.otherPlayer)

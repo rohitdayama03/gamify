@@ -15,5 +15,7 @@ String apiErrorMessage(DioException e, String fallback) {
   if (e.response == null) {
     return "Can't reach the GAMIFY server. Check your connection and try again.";
   }
-  return fallback;
+  // A reply that isn't the backend's JSON (e.g. a proxy's redirect or error page); the status helps diagnose it
+  final status = e.response?.statusCode;
+  return status == null ? fallback : '$fallback (server replied HTTP $status)';
 }
