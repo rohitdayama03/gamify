@@ -1,14 +1,19 @@
 // Preset values for the register / edit profile forms
 class FormOptions {
-  static const List<String> securityQuestions = [
-    'What was the name of your first pet?',
-    'In which city were you born?',
-    "What is your mother's maiden name?",
-    'What was the name of your first school?',
-    'What is your favourite game of all time?',
-    'What was your first gaming username?',
-    'What is the name of your childhood best friend?',
-    'What was the model of your first phone?',
+  // Country calling codes for the phone number field; India first as most players are there
+  static const List<({String country, String code})> dialCodes = [
+    (country: 'India', code: '+91'),
+    (country: 'Bangladesh', code: '+880'),
+    (country: 'Nepal', code: '+977'),
+    (country: 'Pakistan', code: '+92'),
+    (country: 'Sri Lanka', code: '+94'),
+    (country: 'United Arab Emirates', code: '+971'),
+    (country: 'Saudi Arabia', code: '+966'),
+    (country: 'Singapore', code: '+65'),
+    (country: 'Malaysia', code: '+60'),
+    (country: 'United Kingdom', code: '+44'),
+    (country: 'United States / Canada', code: '+1'),
+    (country: 'Australia', code: '+61'),
   ];
 
   // A player can speak several languages; they are stored as one comma-separated string

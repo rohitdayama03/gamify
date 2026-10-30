@@ -11,6 +11,7 @@ import '../../models/player_model.dart';
 import '../../providers/player_provider.dart';
 import '../../widgets/connect_button.dart';
 import '../player/player_profile_screen.dart';
+import '../../widgets/player_avatar.dart';
 
 enum _Filter {
   game,
@@ -579,7 +580,13 @@ class _PlayerCard extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _Avatar(name: player.username, radius: 28),
+                PlayerAvatar(
+                  name: player.username,
+                  url: player.avatarUrl,
+                  radius: 28,
+                  backgroundColor: AppColors.primary,
+                  textStyle: const TextStyle(color: AppColors.onPrimary, fontWeight: FontWeight.bold, fontSize: 28 * 0.8),
+                ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: Column(
@@ -676,34 +683,6 @@ class _GameTag extends StatelessWidget {
           fontWeight: FontWeight.w600,
         ),
       ),
-    );
-  }
-}
-
-class _Avatar extends StatelessWidget {
-  final String? name;
-  final double radius;
-
-  const _Avatar({required this.name, required this.radius});
-
-  @override
-  Widget build(BuildContext context) {
-    final initial = (name == null || name!.isEmpty)
-        ? null
-        : name![0].toUpperCase();
-    return CircleAvatar(
-      radius: radius,
-      backgroundColor: AppColors.primary,
-      child: initial == null
-          ? Icon(Icons.person, color: AppColors.onPrimary, size: radius)
-          : Text(
-              initial,
-              style: TextStyle(
-                color: AppColors.onPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: radius * 0.8,
-              ),
-            ),
     );
   }
 }

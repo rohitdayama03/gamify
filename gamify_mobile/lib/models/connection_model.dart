@@ -1,6 +1,8 @@
 class PlayerSummary {
   final int playerId;
   final String username;
+  // Signed S3 link to their profile picture, valid for about an hour; null shows their initial
+  final String? avatarUrl;
   final String? playerBio;
   final String? country;
   final String? language;
@@ -8,6 +10,7 @@ class PlayerSummary {
   PlayerSummary({
     required this.playerId,
     required this.username,
+    this.avatarUrl,
     this.playerBio,
     this.country,
     this.language,
@@ -17,6 +20,7 @@ class PlayerSummary {
     return PlayerSummary(
       playerId: json['playerId'],
       username: json['username'],
+      avatarUrl: json['avatarUrl'],
       playerBio: json['playerBio'],
       country: json['country'],
       language: json['language'],

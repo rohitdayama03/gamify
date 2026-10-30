@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
+
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/api/api_error.dart';
@@ -25,12 +26,39 @@ class AuthProvider extends ChangeNotifier {
     return token != null;
   }
 
-  Future<bool> login(String username, String password) async {
+  /// Sends a sign-in code on WhatsApp. For [OtpPurpose.register], [username] is checked
+  /// first so a code isn't spent on an account that can't be created. Returns null on failure.
+  Future<OtpSent?> sendOtp({
+    required String phoneNumber,
+    required OtpPurpose purpose,
+    String? username,
+  }) async {
+    _setLoading(true);
+    try {
+      final response = await _apiClient.dio.post(
+        ApiEndpoints.sendOtp,
+        data: {
+          'phoneNumber': phoneNumber,
+          'purpose': purpose.name.toUpperCase(),
+          'username': ?username,
+        },
+      );
+      _errorMessage = null;
+      _setLoading(false);
+      return OtpSent.fromJson(response.data);
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, 'Could not send the code');
+      _setLoading(false);
+      return null;
+    }
+  }
+
+  Future<bool> login({required String phoneNumber, required String otp}) async {
     _setLoading(true);
     try {
       final response = await _apiClient.dio.post(
         ApiEndpoints.login,
-        data: {'username': username, 'password': password},
+        data: {'phoneNumber': phoneNumber, 'otp': otp},
       );
       _authResponse = AuthResponse.fromJson(response.data);
       await _storage.saveToken(_authResponse!.token);
@@ -46,13 +74,8 @@ class AuthProvider extends ChangeNotifier {
 
   Future<bool> register({
     required String username,
-    required String email,
-    required String password,
-    String? playerBio,
-    String? language,
-    String? country,
-    required String secretQuestion,
-    required String secretAnswer,
+    required String phoneNumber,
+    required String otp,
     required bool acceptedTerms,
   }) async {
     _setLoading(true);
@@ -61,14 +84,9 @@ class AuthProvider extends ChangeNotifier {
         ApiEndpoints.register,
         data: {
           'username': username,
-          'email': email,
-          'password': password,
+          'phoneNumber': phoneNumber,
+          'otp': otp,
           'acceptedTerms': acceptedTerms,
-          'playerBio': playerBio,
-          'language': language,
-          'country': country,
-          'secretQuestion': secretQuestion,
-          'secretAnswer': secretAnswer,
         },
       );
       _authResponse = AuthResponse.fromJson(response.data);
@@ -78,44 +96,6 @@ class AuthProvider extends ChangeNotifier {
       return true;
     } on DioException catch (e) {
       _errorMessage = apiErrorMessage(e, 'Registration failed');
-      _setLoading(false);
-      return false;
-    }
-  }
-
-  Future<SecretQuestionResponse?> getSecretQuestion(String username) async {
-    _setLoading(true);
-    try {
-      final response = await _apiClient.dio.get(
-        ApiEndpoints.secretQuestion,
-        queryParameters: {'username': username},
-      );
-      _errorMessage = null;
-      _setLoading(false);
-      return SecretQuestionResponse.fromJson(response.data);
-    } on DioException catch (e) {
-      _errorMessage = apiErrorMessage(e, 'User not found');
-      _setLoading(false);
-      return null;
-    }
-  }
-
-  Future<bool> resetPassword(String username, String secretAnswer, String newPassword) async {
-    _setLoading(true);
-    try {
-      await _apiClient.dio.post(
-        ApiEndpoints.resetPassword,
-        data: {
-          'username': username,
-          'secretAnswer': secretAnswer,
-          'newPassword': newPassword,
-        },
-      );
-      _errorMessage = null;
-      _setLoading(false);
-      return true;
-    } on DioException catch (e) {
-      _errorMessage = apiErrorMessage(e, 'Password reset failed');
       _setLoading(false);
       return false;
     }

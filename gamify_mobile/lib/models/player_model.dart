@@ -89,8 +89,10 @@ class EfootballProfileResponse {
 class PlayerResponse {
   final int playerId;
   final String username;
+  // Signed S3 link to their profile picture, valid for about an hour; null shows their initial
+  final String? avatarUrl;
   // Only present on the signed-in player's own profile
-  final String? email;
+  final String? phoneNumber;
   final String? playerBio;
   final String? language;
   final String? country;
@@ -105,7 +107,8 @@ class PlayerResponse {
   PlayerResponse({
     required this.playerId,
     required this.username,
-    this.email,
+    this.avatarUrl,
+    this.phoneNumber,
     this.playerBio,
     this.language,
     this.country,
@@ -122,7 +125,8 @@ class PlayerResponse {
     return PlayerResponse(
       playerId: json['playerId'],
       username: json['username'],
-      email: json['email'],
+      avatarUrl: json['avatarUrl'],
+      phoneNumber: json['phoneNumber'],
       playerBio: json['playerBio'],
       language: json['language'],
       country: json['country'],

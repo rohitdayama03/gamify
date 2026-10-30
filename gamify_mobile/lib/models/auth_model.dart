@@ -21,19 +21,19 @@ class AuthResponse {
   }
 }
 
-class SecretQuestionResponse {
-  final String username;
-  final String secretQuestion;
+enum OtpPurpose { register, login }
 
-  SecretQuestionResponse({
-    required this.username,
-    required this.secretQuestion,
-  });
+/// Reply to a code request: how long the code works and how many more can be sent today.
+class OtpSent {
+  final Duration expiresIn;
+  final int remainingToday;
 
-  factory SecretQuestionResponse.fromJson(Map<String, dynamic> json) {
-    return SecretQuestionResponse(
-      username: json['username'],
-      secretQuestion: json['secretQuestion'],
+  OtpSent({required this.expiresIn, required this.remainingToday});
+
+  factory OtpSent.fromJson(Map<String, dynamic> json) {
+    return OtpSent(
+      expiresIn: Duration(seconds: json['expiresInSeconds']),
+      remainingToday: json['remainingToday'],
     );
   }
 }

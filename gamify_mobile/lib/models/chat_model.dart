@@ -1,9 +1,11 @@
 import 'connection_model.dart';
 
+/// A message in a friend chat or a squad. Squad messages have no [receiverId] and carry [senderName].
 class ChatMessage {
   final int id;
   final int senderId;
-  final int receiverId;
+  final int? receiverId;
+  final String? senderName;
   final String content;
   final bool fromMe;
   final DateTime createdAt;
@@ -11,7 +13,8 @@ class ChatMessage {
   ChatMessage({
     required this.id,
     required this.senderId,
-    required this.receiverId,
+    this.receiverId,
+    this.senderName,
     required this.content,
     required this.fromMe,
     required this.createdAt,
@@ -22,6 +25,7 @@ class ChatMessage {
       id: json['id'],
       senderId: json['senderId'],
       receiverId: json['receiverId'],
+      senderName: json['senderUsername'],
       content: json['content'],
       fromMe: json['fromMe'] ?? false,
       createdAt: DateTime.tryParse(json['createdAt'] ?? '')?.toLocal() ?? DateTime.now(),

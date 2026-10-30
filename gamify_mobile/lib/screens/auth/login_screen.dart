@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/form_options.dart';
+import '../../models/auth_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../widgets/primary_button.dart';
 import '../start_screen.dart';
-import 'forgot_password_screen.dart';
+import 'otp_widgets.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -17,20 +19,49 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _usernameController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
+  final _phoneController = TextEditingController();
+  final _codeController = TextEditingController();
+  String _dialCode = FormOptions.dialCodes.first.code;
+  // Set once a code is sent; the screen then asks for the code
+  OtpSent? _otpSent;
   bool _submitted = false;
   String? _error;
 
   @override
   void dispose() {
-    _usernameController.dispose();
-    _passwordController.dispose();
+    _phoneController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleLogin() async {
+  String get _phoneNumber =>
+      PhoneNumberField.fullNumber(_dialCode, _phoneController.text);
+
+  Future<void> _sendCode() async {
+    setState(() {
+      _submitted = true;
+      _error = null;
+    });
+    if (!_formKey.currentState!.validate()) return;
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sent = await auth.sendOtp(
+      phoneNumber: _phoneNumber,
+      purpose: OtpPurpose.login,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (sent != null) {
+        _otpSent = sent;
+        _submitted = false;
+        _codeController.clear();
+      } else {
+        _error = auth.errorMessage ?? 'Could not send the code.';
+      }
+    });
+  }
+
+  Future<void> _verify() async {
     setState(() {
       _submitted = true;
       _error = null;
@@ -39,8 +70,8 @@ class _LoginScreenState extends State<LoginScreen> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(
-      _usernameController.text.trim(),
-      _passwordController.text,
+      phoneNumber: _phoneNumber,
+      otp: _codeController.text,
     );
     if (!mounted) return;
 
@@ -61,6 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final otpSent = _otpSent;
 
     return Scaffold(
       appBar: AppBar(),
@@ -90,70 +122,42 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       const Text(
-                        'Sign in to continue finding players.',
+                        "Sign in with your WhatsApp number. We'll send you a code.",
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: AppSpacing.lg),
-                      TextFormField(
-                        controller: _usernameController,
-                        autofillHints: const [AutofillHints.username],
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.person_outline),
+                      if (otpSent == null)
+                        PhoneNumberField(
+                          dialCode: _dialCode,
+                          onDialCodeChanged: (code) =>
+                              setState(() => _dialCode = code),
+                          controller: _phoneController,
+                          onSubmitted: (_) => _sendCode(),
+                        )
+                      else
+                        OtpCodeStep(
+                          phoneNumber:
+                              '$_dialCode ${_phoneController.text.trim()}',
+                          controller: _codeController,
+                          remainingToday: otpSent.remainingToday,
+                          busy: auth.isLoading,
+                          onCompleted: (_) => _verify(),
+                          onResend: _sendCode,
+                          onChangeNumber: () => setState(() {
+                            _otpSent = null;
+                            _error = null;
+                            _submitted = false;
+                          }),
                         ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Enter your username'
-                            : null,
-                      ),
                       const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        autofillHints: const [AutofillHints.password],
-                        textInputAction: TextInputAction.done,
-                        onFieldSubmitted: (_) => _handleLogin(),
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            tooltip: _obscurePassword
-                                ? 'Show password'
-                                : 'Hide password',
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
-                          ),
-                        ),
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? 'Enter your password'
-                            : null,
-                      ),
-                      Align(
-                        alignment: Alignment.centerRight,
-                        child: TextButton(
-                          onPressed: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const ForgotPasswordScreen(),
-                            ),
-                          ),
-                          child: const Text('Forgot password?'),
-                        ),
-                      ),
                       if (_error != null) ...[
                         MessageBanner(message: _error!),
                         const SizedBox(height: AppSpacing.md),
                       ],
                       PrimaryButton(
-                        label: 'Sign in',
+                        label: otpSent == null ? 'Send code' : 'Sign in',
                         loading: auth.isLoading,
-                        onPressed: _handleLogin,
+                        onPressed: otpSent == null ? _sendCode : _verify,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(

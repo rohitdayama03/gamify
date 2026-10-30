@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
@@ -9,11 +12,16 @@ import '../../providers/connection_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../widgets/game_profile_card.dart';
 import '../../widgets/player_header.dart';
+import '../../widgets/player_tournaments_section.dart';
+import '../../widgets/player_posts_grid.dart';
+import '../../widgets/profile_tabs.dart';
 import '../messages/messages_screen.dart';
 import '../settings/edit_interests_screen.dart';
 import 'edit_game_profiles_screen.dart';
+import 'avatar_picker.dart';
 import 'edit_profile_screen.dart';
 import '../../core/theme/app_theme.dart';
+import '../../widgets/player_avatar.dart';
 
 /// Profile hub: account header, a card per game profile, then friends (PRD §5).
 class ProfileScreen extends StatefulWidget {
@@ -37,6 +45,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
     MaterialPageRoute(builder: (_) => const EditProfileScreen()),
   );
 
+  Future<void> _changeAvatar(PlayerResponse player) async {
+    final action = await AvatarPicker.askAction(context, hasPicture: player.avatarUrl != null);
+    if (action == null || !mounted) return;
+    final provider = Provider.of<PlayerProvider>(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    bool ok;
+    if (action == AvatarAction.remove) {
+      ok = await provider.removeAvatar();
+    } else {
+      Uint8List? picture;
+      try {
+        picture = await AvatarPicker.pickAndCrop(
+          context,
+          action == AvatarAction.camera ? ImageSource.camera : ImageSource.gallery,
+        );
+      } on AvatarPickerException catch (e) {
+        messenger.showSnackBar(SnackBar(content: Text(e.message)));
+        return;
+      } catch (e) {
+        debugPrint('Could not open photo: $e');
+        messenger.showSnackBar(const SnackBar(content: Text("Couldn't open that photo")));
+        return;
+      }
+      if (picture == null) return;
+      ok = await provider.setAvatar(picture);
+    }
+    if (!ok) {
+      messenger.showSnackBar(SnackBar(content: Text(provider.errorMessage ?? 'Could not update your picture')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final playerProvider = Provider.of<PlayerProvider>(context);
@@ -50,47 +89,62 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ? playerProvider.isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : const Center(child: Text('No Profile Found'))
-          : RefreshIndicator(
-              onRefresh: () => Future.wait([
-                playerProvider.fetchMyProfile(),
-                Provider.of<ConnectionProvider>(
-                  context,
-                  listen: false,
-                ).fetchConnections(),
-              ]),
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                children: [
-                  // Full-width identity header; the game cards below keep the side gutters
-                  PlayerHeader(
-                    player: player,
-                    emptyBioText:
-                        'No bio yet. A short bio helps players decide to accept your request.',
-                    action: SizedBox(
-                      height: 44,
-                      width: double.infinity,
-                      child: OutlinedButton.icon(
-                        onPressed: _editProfile,
-                        icon: const Icon(Icons.edit_outlined, size: 18),
-                        label: const Text('Edit profile'),
+          : ProfileTabs(
+              posts: PlayerPostsGrid(
+                playerId: player.playerId,
+                isMe: true,
+                emptyText: 'Share your best plays. Tap New post to add a photo, video or text.',
+              ),
+              profile: RefreshIndicator(
+                onRefresh: () => Future.wait([
+                  playerProvider.fetchMyProfile(),
+                  Provider.of<ConnectionProvider>(
+                    context,
+                    listen: false,
+                  ).fetchConnections(),
+                ]),
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  children: [
+                    // Full-width identity header; the game cards below keep the side gutters
+                    PlayerHeader(
+                      player: player,
+                      emptyBioText: 'No bio yet. A short bio helps players decide to accept your request.',
+                      onAvatarTap: () => _changeAvatar(player),
+                      avatarBusy: playerProvider.savingAvatar,
+                      action: SizedBox(
+                        height: 44,
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: _editProfile,
+                          icon: const Icon(Icons.edit_outlined, size: 18),
+                          label: const Text('Edit profile'),
+                        ),
                       ),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.gutter,
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.gutter,
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: AppSpacing.md),
+                          ..._buildGameProfiles(player),
+                          const SizedBox(height: AppSpacing.lg),
+                          PlayerTournamentsSection(
+                            // Reloads along with the rest of the profile on pull-to-refresh
+                            key: ValueKey(player),
+                            playerId: player.playerId,
+                            emptyText: "You haven't played in a tournament yet. Find one from Home.",
+                          ),
+                          const SizedBox(height: AppSpacing.lg),
+                          _FriendsCard(friends: friends),
+                        ],
+                      ),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: AppSpacing.md),
-                        ..._buildGameProfiles(player),
-                        const SizedBox(height: AppSpacing.lg),
-                        _FriendsCard(friends: friends),
-                      ],
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
     );
@@ -192,17 +246,10 @@ class _FriendsCard extends StatelessWidget {
           else
             for (final friend in friends)
               ListTile(
-                leading: CircleAvatar(
-                  backgroundColor: AppColors.surfaceAlt,
-                  child: Text(
-                    friend.username.isEmpty
-                        ? '?'
-                        : friend.username[0].toUpperCase(),
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                leading: PlayerAvatar(
+                  name: friend.username,
+                  url: friend.avatarUrl,
+                  foregroundColor: AppColors.textPrimary,
                 ),
                 title: Text(
                   friend.username,

@@ -8,6 +8,8 @@ import com.example.gamify.entity.GtaProfile;
 import com.example.gamify.entity.Player;
 import com.example.gamify.exception.ResourceNotFoundException;
 import com.example.gamify.mapper.PlayerMapper;
+import com.example.gamify.media.MediaUploadService;
+import com.example.gamify.media.UploadKind;
 import com.example.gamify.repository.BgmiProfileRepository;
 import com.example.gamify.repository.ChatMessageRepository;
 import com.example.gamify.repository.DeviceTokenRepository;
@@ -18,6 +20,8 @@ import com.example.gamify.repository.PlayerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Collections;
 
 @Service
 @RequiredArgsConstructor
@@ -30,6 +34,10 @@ public class PlayerServiceImpl implements PlayerService {
     private final PlayerConnectionRepository connectionRepository;
     private final ChatMessageRepository chatMessageRepository;
     private final DeviceTokenRepository deviceTokenRepository;
+    private final SquadService squadService;
+    private final TournamentService tournamentService;
+    private final PostService postService;
+    private final MediaUploadService uploadService;
     private final PlayerMapper playerMapper;
 
     @Override
@@ -71,9 +79,46 @@ public class PlayerServiceImpl implements PlayerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Player not found with username: " + username));
         // Invites and messages reference the player by foreign key, so remove them first
         chatMessageRepository.deleteAllInvolving(player);
+        // Squads they own pass to another member, or are deleted if nobody else is left
+        squadService.removePlayerFromAllSquads(player);
+        // Tournaments they organize are deleted along with their announcements
+        tournamentService.removePlayerFromAllTournaments(player);
+        // Their posts, uploaded files and comments go too
+        postService.removePlayerContent(player);
+        uploadService.deleteAfterCommit(Collections.singletonList(player.getAvatarKey()));
         deviceTokenRepository.deleteAllByPlayer(player);
         connectionRepository.deleteAllInvolving(player);
         playerRepository.delete(player);
+    }
+
+    @Override
+    @Transactional
+    public UploadSessionResponse startAvatarUpload(String username, AvatarUploadRequest request) {
+        return uploadService.startAvatarUpload(findPlayer(username), request.contentType(), request.size());
+    }
+
+    @Override
+    @Transactional
+    public PlayerResponse setAvatar(String username, String key) {
+        Player player = findPlayer(username);
+        String previous = player.getAvatarKey();
+        player.setAvatarKey(uploadService.claim(player, key, UploadKind.AVATAR).key());
+        uploadService.deleteAfterCommit(Collections.singletonList(previous));
+        return playerMapper.toOwnPlayerResponse(playerRepository.save(player));
+    }
+
+    @Override
+    @Transactional
+    public PlayerResponse removeAvatar(String username) {
+        Player player = findPlayer(username);
+        uploadService.deleteAfterCommit(Collections.singletonList(player.getAvatarKey()));
+        player.setAvatarKey(null);
+        return playerMapper.toOwnPlayerResponse(playerRepository.save(player));
+    }
+
+    private Player findPlayer(String username) {
+        return playerRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("Player not found with username: " + username));
     }
 
     // --- GTA Online Profile Operations ---

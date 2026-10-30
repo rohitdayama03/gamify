@@ -5,6 +5,8 @@ import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/squad_provider.dart';
+import '../../providers/tournament_provider.dart';
 import '../messages/messages_screen.dart';
 import '../notifications/notifications_screen.dart';
 import 'sent_requests_view.dart';
@@ -33,9 +35,12 @@ class InboxScreenState extends State<InboxScreen>
 
   @override
   Widget build(BuildContext context) {
-    final unread = Provider.of<ChatProvider>(context).totalUnread;
+    final squads = Provider.of<SquadProvider>(context);
+    final tournaments = Provider.of<TournamentProvider>(context);
+    final unread = Provider.of<ChatProvider>(context).totalUnread + squads.totalUnread + tournaments.totalUnread;
     final connections = Provider.of<ConnectionProvider>(context);
-    final received = connections.pendingInvites.length;
+    // Friend requests, squad invites and tournament join requests all wait in Received
+    final received = connections.pendingInvites.length + squads.invites.length + tournaments.requests.length;
     final sentPending = connections.pendingSentCount;
 
     return Column(

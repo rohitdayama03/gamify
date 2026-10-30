@@ -7,10 +7,18 @@
 #   DB_USERNAME           Database user
 #   DB_PASSWORD           Database password
 #   JWT_SECRET            256-bit hex key used to sign login tokens (the app won't start without it)
+#   MEDIA_S3_BUCKET       Private S3 bucket for post photos and videos, e.g. gamify-media (the app won't start
+#                         if it can't reach it)
 # Optional:
 #   CORS_ALLOWED_ORIGINS  Comma-separated origins allowed to call the API from a browser,
 #                         e.g. https://app.example.com (only needed for the Flutter web build)
 #   FIREBASE_SERVICE_ACCOUNT  Firebase service account JSON (the whole file); turns on push notifications
+#   MEDIA_S3_REGION       The bucket's region, e.g. ap-south-1 (defaults to the EC2 instance's region)
+#
+# Post media goes to S3, not the instance's disk. Give the instance an IAM role allowing s3:PutObject,
+# s3:GetObject and s3:DeleteObject on arn:aws:s3:::<bucket>/posts/*, plus s3:ListBucket on the bucket
+# (startup checks it). No AWS keys are needed in secrets. Keep Block Public Access on: the app only
+# ever gets short-lived signed links.
 #
 # The EC2 instance needs Java 17+ installed (Amazon Linux: sudo dnf install -y java-17-amazon-corretto-headless)
 # and port 8080 open to clients in its security group.
@@ -68,12 +76,14 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           CORS_ALLOWED_ORIGINS: ${{ secrets.CORS_ALLOWED_ORIGINS }}
           FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+          MEDIA_S3_BUCKET: ${{ secrets.MEDIA_S3_BUCKET }}
+          MEDIA_S3_REGION: ${{ secrets.MEDIA_S3_REGION }}
         run: |
           echo "$EC2_SSH_PRIVATE_KEY" > ec2_key.pem
           chmod 600 ec2_key.pem
 
           # Fail early with a clear message instead of a backend that won't start
-          for name in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET; do
+          for name in DB_URL DB_USERNAME DB_PASSWORD JWT_SECRET MEDIA_S3_BUCKET; do
             if [ -z "${!name}" ]; then
               echo "::error::Missing repository secret $name"
               exit 1
@@ -86,6 +96,10 @@ jobs:
             printf 'export DB_USERNAME=%q\n' "$DB_USERNAME"
             printf 'export DB_PASSWORD=%q\n' "$DB_PASSWORD"
             printf 'export JWT_SECRET=%q\n' "$JWT_SECRET"
+            printf 'export MEDIA_S3_BUCKET=%q\n' "$MEDIA_S3_BUCKET"
+            if [ -n "$MEDIA_S3_REGION" ]; then
+              printf 'export MEDIA_S3_REGION=%q\n' "$MEDIA_S3_REGION"
+            fi
             if [ -n "$CORS_ALLOWED_ORIGINS" ]; then
               printf 'export CORS_ALLOWED_ORIGINS=%q\n' "$CORS_ALLOWED_ORIGINS"
             fi

@@ -8,6 +8,8 @@ import '../../core/notifications/push_notifications.dart';
 import '../../models/game.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/connection_provider.dart';
+import '../../providers/squad_provider.dart';
+import '../../providers/tournament_provider.dart';
 import '../../widgets/app_logo.dart';
 import '../discover/discover_screen.dart';
 import '../home/home_screen.dart';
@@ -58,6 +60,8 @@ class _MainScreenState extends State<MainScreen> {
   void _refresh() {
     Provider.of<ConnectionProvider>(context, listen: false).fetchConnections();
     Provider.of<ChatProvider>(context, listen: false).fetchConversations();
+    Provider.of<SquadProvider>(context, listen: false).refresh();
+    Provider.of<TournamentProvider>(context, listen: false).refresh();
   }
 
   void _selectTab(int index) {
@@ -73,10 +77,16 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final squads = Provider.of<SquadProvider>(context);
+    final tournaments = Provider.of<TournamentProvider>(context);
     final pendingCount = Provider.of<ConnectionProvider>(context)
-        .pendingInvites
-        .length;
-    final unreadCount = Provider.of<ChatProvider>(context).totalUnread;
+            .pendingInvites
+            .length +
+        squads.invites.length +
+        tournaments.requests.length;
+    final unreadCount = Provider.of<ChatProvider>(context).totalUnread +
+        squads.totalUnread +
+        tournaments.totalUnread;
     final inboxCount = pendingCount + unreadCount;
 
     return PopScope(

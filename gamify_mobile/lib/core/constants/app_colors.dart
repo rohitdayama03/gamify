@@ -15,6 +15,8 @@ class AppColors {
   static const Color textPrimary = Color(0xFFF2F5F3);
   static const Color textSecondary = Color(0xFF8C9690);
   static const Color error = Color(0xFFFF5C5C);
+  // A liked post's heart
+  static const Color like = Color(0xFFFF4D6D);
   // Only for explicit user-set availability or confirmed success
   static const Color success = Color(0xFF4AF2A1);
 }

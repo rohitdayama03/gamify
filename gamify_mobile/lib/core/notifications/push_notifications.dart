@@ -10,6 +10,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../models/connection_model.dart';
 import '../../screens/messages/chat_screen.dart';
 import '../../screens/notifications/notifications_screen.dart';
+import '../../screens/posts/post_detail_screen.dart';
+import '../../screens/tournaments/tournament_detail_screen.dart';
 import '../api/api_client.dart';
 import '../api/api_endpoints.dart';
 
@@ -29,6 +31,12 @@ class PushNotifications {
   /// The friend whose chat is open, so their messages don't also pop up as notifications.
   static int? openChatPlayerId;
 
+  /// The squad whose chat is open, for the same reason.
+  static int? openSquadId;
+
+  /// The tournament whose announcements are open, for the same reason.
+  static int? openTournamentId;
+
   // Must match the channels the backend sends to (PushNotification.CHANNEL_*)
   static const AndroidNotificationChannel _messagesChannel = AndroidNotificationChannel(
     'messages',
@@ -39,8 +47,15 @@ class PushNotifications {
   static const AndroidNotificationChannel _requestsChannel = AndroidNotificationChannel(
     'requests',
     'Requests',
-    description: 'Friend requests you receive and requests that are accepted',
+    description: 'Friend requests, squad invites and tournament updates',
     importance: Importance.high,
+  );
+
+  static const AndroidNotificationChannel _activityChannel = AndroidNotificationChannel(
+    'activity',
+    'Comments',
+    description: 'Comments on your posts and replies to your comments',
+    importance: Importance.defaultImportance,
   );
 
   final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
@@ -65,6 +80,7 @@ class PushNotifications {
       final android = _local.resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
       await android?.createNotificationChannel(_messagesChannel);
       await android?.createNotificationChannel(_requestsChannel);
+      await android?.createNotificationChannel(_activityChannel);
       _ready = true;
     } catch (e) {
       debugPrint('Push notifications unavailable: $e');
@@ -125,6 +141,18 @@ class PushNotifications {
     await _local.cancel(id: 0, tag: 'chat-$playerId');
   }
 
+  /// Clears the notification for a squad chat once it's opened in the app.
+  Future<void> clearSquad(int squadId) async {
+    if (!_ready) return;
+    await _local.cancel(id: 0, tag: 'squad-$squadId');
+  }
+
+  /// Clears the announcement notification for a tournament once its chat is opened.
+  Future<void> clearTournament(int tournamentId) async {
+    if (!_ready) return;
+    await _local.cancel(id: 0, tag: 'tournament-$tournamentId');
+  }
+
   Future<void> _register(String installationId) async {
     try {
       await ApiClient().dio.post(ApiEndpoints.devices, data: {'token': installationId, 'platform': 'android'});
@@ -140,8 +168,14 @@ class PushNotifications {
     if (notification == null) return;
     // Already reading this chat; the new message appears there
     if (data['type'] == 'message' && int.tryParse('${data['playerId']}') == openChatPlayerId) return;
+    if (data['type'] == 'squad_message' && int.tryParse('${data['squadId']}') == openSquadId) return;
+    if (data['type'] == 'tournament_message' && int.tryParse('${data['tournamentId']}') == openTournamentId) return;
 
-    final channel = notification.android?.channelId == _requestsChannel.id ? _requestsChannel : _messagesChannel;
+    final channel = switch (notification.android?.channelId) {
+      'requests' => _requestsChannel,
+      'activity' => _activityChannel,
+      _ => _messagesChannel,
+    };
     _local.show(
       id: 0,
       title: notification.title,
@@ -152,8 +186,8 @@ class PushNotifications {
           channel.id,
           channel.name,
           channelDescription: channel.description,
-          importance: Importance.high,
-          priority: Priority.high,
+          importance: channel.importance,
+          priority: channel.importance == Importance.high ? Priority.high : Priority.defaultPriority,
           icon: 'ic_notification',
           color: const Color(0xFF4AF2A1),
           // Same tag as the backend uses, so a newer message replaces the older one
@@ -184,7 +218,37 @@ class PushNotifications {
           navigator.push(MaterialPageRoute(
             builder: (_) => ChatScreen(friend: PlayerSummary(playerId: playerId, username: username)),
           ));
+        case 'squad_message':
+          final squadId = int.tryParse('${data['squadId']}');
+          if (squadId == null) return;
+          navigator.push(MaterialPageRoute(
+            builder: (_) => ChatScreen.squad(squadId: squadId, squadName: '${data['squadName'] ?? 'Squad'}'),
+          ));
+        case 'tournament_message':
+          final tournamentId = int.tryParse('${data['tournamentId']}');
+          if (tournamentId == null) return;
+          // Only organizers post, so whoever gets this push is a participant reading along
+          navigator.push(MaterialPageRoute(
+            builder: (_) => ChatScreen.tournament(
+              tournamentId: tournamentId,
+              tournamentName: '${data['tournamentName'] ?? 'Tournament'}',
+              isOrganizer: false,
+            ),
+          ));
+        case 'tournament_update':
+          final tournamentId = int.tryParse('${data['tournamentId']}');
+          if (tournamentId == null) return;
+          navigator.push(MaterialPageRoute(
+            builder: (_) => TournamentDetailScreen(tournamentId: tournamentId, name: '${data['tournamentName'] ?? ''}'),
+          ));
+        case 'post_comment':
+        case 'post_like':
+          final postId = int.tryParse('${data['postId']}');
+          if (postId == null) return;
+          navigator.push(MaterialPageRoute(builder: (_) => PostDetailScreen(postId: postId)));
         case 'request_received':
+        case 'squad_invite':
+        case 'tournament_request':
           navigator.push(MaterialPageRoute(builder: (_) => const NotificationsScreen()));
       }
     });

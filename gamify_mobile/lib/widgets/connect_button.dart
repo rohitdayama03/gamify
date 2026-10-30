@@ -87,6 +87,7 @@ class ConnectButton extends StatelessWidget {
             PlayerSummary(
               playerId: player.playerId,
               username: player.username,
+              avatarUrl: player.avatarUrl,
               playerBio: player.playerBio,
               country: player.country,
               language: player.language,

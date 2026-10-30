@@ -3,11 +3,13 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/form_options.dart';
+import '../../models/auth_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/player_provider.dart';
 import '../../widgets/primary_button.dart';
 import '../onboarding/onboarding_screen.dart';
 import 'login_screen.dart';
+import 'otp_widgets.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -17,55 +19,76 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
-
   final _formKey = GlobalKey<FormState>();
   final _usernameController = TextEditingController();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _confirmController = TextEditingController();
-  final _secretAnswerController = TextEditingController();
-  String? _secretQuestion;
+  final _phoneController = TextEditingController();
+  final _codeController = TextEditingController();
+  String _dialCode = FormOptions.dialCodes.first.code;
   bool _acceptedTerms = false;
-  bool _obscurePassword = true;
   bool _submitted = false;
+  // Set once a code is sent; the screen then asks for the code
+  OtpSent? _otpSent;
 
   // Errors the server reported for a specific field, e.g. "Username is already taken"
   String? _usernameServerError;
-  String? _emailServerError;
+  String? _phoneServerError;
   String? _formError;
 
   @override
   void dispose() {
-    for (final c in [
-      _usernameController,
-      _emailController,
-      _passwordController,
-      _confirmController,
-      _secretAnswerController,
-    ]) {
+    for (final c in [_usernameController, _phoneController, _codeController]) {
       c.dispose();
     }
     super.dispose();
   }
 
-  Future<void> _handleRegister() async {
+  String get _phoneNumber =>
+      PhoneNumberField.fullNumber(_dialCode, _phoneController.text);
+
+  void _clearErrors() {
+    _usernameServerError = null;
+    _phoneServerError = null;
+    _formError = null;
+  }
+
+  Future<void> _sendCode() async {
     setState(() {
       _submitted = true;
-      _usernameServerError = null;
-      _emailServerError = null;
-      _formError = null;
+      _clearErrors();
     });
     final valid = _formKey.currentState!.validate();
     if (!valid || !_acceptedTerms) return;
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sent = await auth.sendOtp(
+      phoneNumber: _phoneNumber,
+      purpose: OtpPurpose.register,
+      username: _usernameController.text.trim(),
+    );
+    if (!mounted) return;
+    if (sent != null) {
+      setState(() {
+        _otpSent = sent;
+        _submitted = false;
+        _codeController.clear();
+      });
+    } else {
+      _showServerError(auth.errorMessage ?? 'Could not send the code.');
+    }
+  }
+
+  Future<void> _handleRegister() async {
+    setState(() {
+      _submitted = true;
+      _clearErrors();
+    });
+    if (!_formKey.currentState!.validate()) return;
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.register(
       username: _usernameController.text.trim(),
-      email: _emailController.text.trim(),
-      password: _passwordController.text,
-      secretQuestion: _secretQuestion!,
-      secretAnswer: _secretAnswerController.text,
+      phoneNumber: _phoneNumber,
+      otp: _codeController.text,
       acceptedTerms: _acceptedTerms,
     );
     if (!mounted) return;
@@ -84,24 +107,36 @@ class _RegisterScreenState extends State<RegisterScreen> {
       return;
     }
 
-    final message =
-        auth.errorMessage ?? 'Registration failed. Please try again.';
+    _showServerError(
+      auth.errorMessage ?? 'Registration failed. Please try again.',
+    );
+  }
+
+  // Shows a field's error under that field, going back to the details step if the code step is open
+  void _showServerError(String message) {
     final lower = message.toLowerCase();
+    final isCodeError = lower.contains('code');
     setState(() {
-      if (lower.contains('username')) {
+      if (!isCodeError) _otpSent = null;
+      if (isCodeError) {
+        _formError = message;
+      } else if (lower.contains('username')) {
         _usernameServerError = message;
-      } else if (lower.contains('email')) {
-        _emailServerError = message;
+      } else if (lower.contains('phone')) {
+        _phoneServerError = message;
       } else {
         _formError = message;
       }
     });
-    _formKey.currentState!.validate();
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => _formKey.currentState?.validate(),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthProvider>(context);
+    final otpSent = _otpSent;
 
     return Scaffold(
       appBar: AppBar(),
@@ -126,185 +161,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        'Create your account',
+                        otpSent == null
+                            ? 'Create your account'
+                            : 'Verify your number',
                         style: Theme.of(context).textTheme.headlineSmall,
                       ),
                       const SizedBox(height: AppSpacing.xs),
-                      const Text(
-                        "You'll pick your games and set up a game profile next. You can skip anything optional.",
-                        style: TextStyle(
-                          color: AppColors.textSecondary,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      TextFormField(
-                        controller: _usernameController,
-                        autofillHints: const [AutofillHints.newUsername],
-                        textInputAction: TextInputAction.next,
-                        maxLength: 50,
-                        onChanged: (_) {
-                          if (_usernameServerError != null) {
-                            setState(() => _usernameServerError = null);
-                          }
-                        },
-                        decoration: const InputDecoration(
-                          labelText: 'Username',
-                          prefixIcon: Icon(Icons.person_outline),
-                          helperText: 'This is how other players find you.',
-                          counterText: '',
-                        ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'Choose a username';
-                          if (value.length < 3) {
-                            return 'Username must be at least 3 characters';
-                          }
-                          return _usernameServerError;
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _emailController,
-                        keyboardType: TextInputType.emailAddress,
-                        autofillHints: const [AutofillHints.email],
-                        textInputAction: TextInputAction.next,
-                        onChanged: (_) {
-                          if (_emailServerError != null) {
-                            setState(() => _emailServerError = null);
-                          }
-                        },
-                        decoration: const InputDecoration(
-                          labelText: 'Email',
-                          prefixIcon: Icon(Icons.mail_outline),
-                        ),
-                        validator: (v) {
-                          final value = v?.trim() ?? '';
-                          if (value.isEmpty) return 'Enter your email';
-                          if (!_emailPattern.hasMatch(value)) {
-                            return 'Enter a valid email, like name@example.com';
-                          }
-                          return _emailServerError;
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: _obscurePassword,
-                        autofillHints: const [AutofillHints.newPassword],
-                        textInputAction: TextInputAction.next,
-                        decoration: InputDecoration(
-                          labelText: 'Password',
-                          prefixIcon: const Icon(Icons.lock_outline),
-                          helperText: 'At least 6 characters.',
-                          suffixIcon: IconButton(
-                            icon: Icon(
-                              _obscurePassword
-                                  ? Icons.visibility_outlined
-                                  : Icons.visibility_off_outlined,
-                            ),
-                            tooltip: _obscurePassword
-                                ? 'Show passwords'
-                                : 'Hide passwords',
-                            onPressed: () => setState(
-                              () => _obscurePassword = !_obscurePassword,
-                            ),
+                      if (otpSent == null) ...[
+                        const Text(
+                          "You'll pick your games and set up a game profile next. You can skip anything optional.",
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            height: 1.4,
                           ),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Create a password';
-                          }
-                          if (v.length < 6) {
-                            return 'Password must be at least 6 characters';
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _confirmController,
-                        obscureText: _obscurePassword,
-                        autofillHints: const [AutofillHints.newPassword],
-                        textInputAction: TextInputAction.next,
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm password',
-                          prefixIcon: Icon(Icons.lock_outline),
+                        const SizedBox(height: AppSpacing.lg),
+                        ..._detailsFields(),
+                      ] else ...[
+                        const SizedBox(height: AppSpacing.md),
+                        OtpCodeStep(
+                          phoneNumber:
+                              '$_dialCode ${_phoneController.text.trim()}',
+                          controller: _codeController,
+                          remainingToday: otpSent.remainingToday,
+                          busy: auth.isLoading,
+                          onCompleted: (_) => _handleRegister(),
+                          onResend: _sendCode,
+                          onChangeNumber: () => setState(() {
+                            _otpSent = null;
+                            _submitted = false;
+                            _clearErrors();
+                          }),
                         ),
-                        validator: (v) {
-                          if (v == null || v.isEmpty) {
-                            return 'Re-enter your password';
-                          }
-                          if (v != _passwordController.text) {
-                            return "Passwords don't match";
-                          }
-                          return null;
-                        },
-                      ),
-                      const SizedBox(height: AppSpacing.lg),
-                      Text(
-                        'Account recovery',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      const Text(
-                        "Used to reset your password if you forget it. Answers aren't case-sensitive.",
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      const SizedBox(height: AppSpacing.sm),
-                      DropdownButtonFormField<String>(
-                        initialValue: _secretQuestion,
-                        isExpanded: true,
-                        dropdownColor: AppColors.surfaceAlt,
-                        decoration: const InputDecoration(
-                          labelText: 'Security question',
-                          prefixIcon: Icon(Icons.shield_outlined),
-                        ),
-                        items: [
-                          for (final question in FormOptions.securityQuestions)
-                            DropdownMenuItem(
-                              value: question,
-                              child: Text(
-                                question,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                        ],
-                        onChanged: (value) =>
-                            setState(() => _secretQuestion = value),
-                        validator: (v) =>
-                            v == null ? 'Choose a security question' : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      TextFormField(
-                        controller: _secretAnswerController,
-                        textInputAction: TextInputAction.done,
-                        decoration: const InputDecoration(
-                          labelText: 'Your answer',
-                          prefixIcon: Icon(Icons.key_outlined),
-                        ),
-                        validator: (v) => (v == null || v.trim().isEmpty)
-                            ? 'Enter an answer you will remember'
-                            : null,
-                      ),
-                      const SizedBox(height: AppSpacing.md),
-                      _TermsCheckbox(
-                        value: _acceptedTerms,
-                        showError: _submitted && !_acceptedTerms,
-                        onChanged: (v) => setState(() => _acceptedTerms = v),
-                      ),
+                      ],
                       const SizedBox(height: AppSpacing.md),
                       if (_formError != null) ...[
                         MessageBanner(message: _formError!),
                         const SizedBox(height: AppSpacing.md),
                       ],
                       PrimaryButton(
-                        label: 'Create account',
+                        label: otpSent == null ? 'Send code' : 'Create account',
                         loading: auth.isLoading,
-                        onPressed: _handleRegister,
+                        onPressed: otpSent == null
+                            ? _sendCode
+                            : _handleRegister,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Row(
@@ -337,6 +237,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ),
     );
   }
+
+  List<Widget> _detailsFields() => [
+    TextFormField(
+      controller: _usernameController,
+      autofillHints: const [AutofillHints.newUsername],
+      textInputAction: TextInputAction.next,
+      maxLength: 50,
+      onChanged: (_) {
+        if (_usernameServerError != null) {
+          setState(() => _usernameServerError = null);
+        }
+      },
+      decoration: const InputDecoration(
+        labelText: 'Username',
+        prefixIcon: Icon(Icons.person_outline),
+        helperText: 'This is how other players find you.',
+        counterText: '',
+      ),
+      validator: (v) {
+        final value = v?.trim() ?? '';
+        if (value.isEmpty) return 'Choose a username';
+        if (value.length < 3) {
+          return 'Username must be at least 3 characters';
+        }
+        return _usernameServerError;
+      },
+    ),
+    const SizedBox(height: AppSpacing.md),
+    PhoneNumberField(
+      dialCode: _dialCode,
+      onDialCodeChanged: (code) => setState(() => _dialCode = code),
+      controller: _phoneController,
+      serverError: _phoneServerError,
+      onChanged: (_) {
+        if (_phoneServerError != null) {
+          setState(() => _phoneServerError = null);
+        }
+      },
+    ),
+    const Padding(
+      padding: EdgeInsets.only(top: 6, left: AppSpacing.sm),
+      child: Text(
+        "You'll sign in with a code we send to this number on WhatsApp.",
+        style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
+      ),
+    ),
+    const SizedBox(height: AppSpacing.md),
+    _TermsCheckbox(
+      value: _acceptedTerms,
+      showError: _submitted && !_acceptedTerms,
+      onChanged: (v) => setState(() => _acceptedTerms = v),
+    ),
+  ];
 }
 
 class _TermsCheckbox extends StatelessWidget {

@@ -24,15 +24,16 @@ public class Player {
     @Column(name = "username", nullable = false, unique = true, length = 50)
     private String username;
 
-    // Nullable at the DB level so accounts created before email was required still load
-    @Column(name = "email", unique = true, length = 255)
-    private String email;
-
-    @Column(name = "password", nullable = false)
-    private String password;
+    // Signs in with a code sent here on WhatsApp. Nullable since accounts made before OTP sign-in have none
+    @Column(name = "phone_number", unique = true, length = 20)
+    private String phoneNumber;
 
     @Column(name = "player_bio", columnDefinition = "TEXT")
     private String playerBio;
+
+    // S3 object key of their profile picture; null shows their initial instead
+    @Column(name = "avatar_key", length = 64)
+    private String avatarKey;
 
     // Comma-separated list, e.g. "English, Hindi"
     @Column(name = "language", length = 255)
@@ -49,12 +50,6 @@ public class Player {
     @Enumerated(EnumType.STRING)
     @Column(name = "last_game", length = 20)
     private Game lastGame;
-
-    @Column(name = "secret_question", nullable = false)
-    private String secretQuestion;
-
-    @Column(name = "secret_answer", nullable = false)
-    private String secretAnswer;
 
     // One-to-One relationships with Game Profiles
     @OneToOne(mappedBy = "player", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)

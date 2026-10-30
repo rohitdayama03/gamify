@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Choose photos and videos to share in your posts.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos and record videos for your posts.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Record sound with videos for your posts.</string>
 </dict>
 </plist>

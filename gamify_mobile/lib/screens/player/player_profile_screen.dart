@@ -9,6 +9,9 @@ import '../../providers/player_provider.dart';
 import '../../widgets/connect_button.dart';
 import '../../widgets/game_profile_card.dart';
 import '../../widgets/player_header.dart';
+import '../../widgets/player_tournaments_section.dart';
+import '../../widgets/player_posts_grid.dart';
+import '../../widgets/profile_tabs.dart';
 import '../../widgets/primary_button.dart';
 
 /// Another player's public profile: who they are, their game profiles, and the action that fits your relationship.
@@ -88,25 +91,47 @@ class _PlayerProfileScreenState extends State<PlayerProfileScreen> {
                 ),
               ),
             )
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-                children: [
-                  PlayerHeader(
-                    player: player,
-                    emptyBioText:
-                        "${player.username} hasn't written a bio yet.",
-                    action: player.playerId == me?.playerId
-                        ? const MessageBanner(
-                            message:
-                                'This is how other players see your profile.',
-                            isError: false,
-                          )
-                        : ConnectButton(player: player, fullWidth: true),
-                  ),
-                  ..._buildGameProfiles(player),
-                ],
+          : ProfileTabs(
+              posts: PlayerPostsGrid(
+                playerId: player.playerId,
+                isMe: player.playerId == me?.playerId,
+                emptyText: "${player.username} hasn't posted yet.",
+              ),
+              profile: RefreshIndicator(
+                onRefresh: _load,
+                child: ListView(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+                  children: [
+                    PlayerHeader(
+                      player: player,
+                      emptyBioText:
+                          "${player.username} hasn't written a bio yet.",
+                      action: player.playerId == me?.playerId
+                          ? const MessageBanner(
+                              message:
+                                  'This is how other players see your profile.',
+                              isError: false,
+                            )
+                          : ConnectButton(player: player, fullWidth: true),
+                    ),
+                    ..._buildGameProfiles(player),
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.gutter,
+                        AppSpacing.md,
+                        AppSpacing.gutter,
+                        0,
+                      ),
+                      child: PlayerTournamentsSection(
+                        // Reloads along with the rest of the profile on pull-to-refresh
+                        key: ValueKey(player),
+                        playerId: player.playerId,
+                        emptyText:
+                            "${player.username} hasn't played in a tournament yet.",
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
     );

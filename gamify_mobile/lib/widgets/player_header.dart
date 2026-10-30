@@ -4,6 +4,7 @@ import '../core/constants/form_options.dart';
 import '../core/theme/app_theme.dart';
 import '../models/game.dart';
 import '../models/player_model.dart';
+import 'player_avatar.dart';
 
 /// The account-level identity block at the top of a profile. It is deliberately not a bordered card
 /// (game profiles below are), so the person reads separately from their per-game details:
@@ -15,12 +16,18 @@ class PlayerHeader extends StatelessWidget {
   // e.g. Edit profile on your own page, the request/message button on someone else's
   final Widget? action;
   final String emptyBioText;
+  // Set on your own profile: tapping the picture changes it
+  final VoidCallback? onAvatarTap;
+  // While a new picture is saving
+  final bool avatarBusy;
 
   const PlayerHeader({
     super.key,
     required this.player,
     this.action,
     this.emptyBioText = 'No bio yet.',
+    this.onAvatarTap,
+    this.avatarBusy = false,
   });
 
   @override
@@ -45,7 +52,7 @@ class PlayerHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              _RoundAvatar(name: player.username),
+              _RoundAvatar(name: player.username, url: player.avatarUrl, onTap: onAvatarTap, busy: avatarBusy),
               const SizedBox(width: AppSpacing.md),
               Expanded(
                 child: Column(
@@ -97,22 +104,60 @@ class PlayerHeader extends StatelessWidget {
 
 class _RoundAvatar extends StatelessWidget {
   final String name;
+  final String? url;
+  final VoidCallback? onTap;
+  final bool busy;
 
-  const _RoundAvatar({required this.name});
+  const _RoundAvatar({required this.name, this.url, this.onTap, this.busy = false});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    final avatar = Container(
       width: 76,
       height: 76,
       padding: const EdgeInsets.all(3),
       decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: AppColors.primary, width: 2)),
-      child: Container(
-        alignment: Alignment.center,
-        decoration: const BoxDecoration(shape: BoxShape.circle, color: AppColors.surfaceAlt),
-        child: Text(
-          name.isEmpty ? '?' : name[0].toUpperCase(),
-          style: TextStyle(fontFamily: AppFonts.display, fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.primary),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          PlayerAvatar(
+            name: name,
+            url: url,
+            radius: 35,
+            textStyle: TextStyle(fontFamily: AppFonts.display, fontSize: 30, fontWeight: FontWeight.w700, color: AppColors.primary),
+          ),
+          if (busy)
+            const DecoratedBox(
+              decoration: BoxDecoration(shape: BoxShape.circle, color: Colors.black54),
+              child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))),
+            ),
+        ],
+      ),
+    );
+    if (onTap == null) return avatar;
+    return Semantics(
+      button: true,
+      label: 'Change profile picture',
+      child: GestureDetector(
+        onTap: busy ? null : onTap,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            avatar,
+            Positioned(
+              right: -2,
+              bottom: -2,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppColors.primary,
+                  border: Border.all(color: AppColors.background, width: 2),
+                ),
+                child: const Icon(Icons.photo_camera, size: 14, color: AppColors.onPrimary),
+              ),
+            ),
+          ],
         ),
       ),
     );

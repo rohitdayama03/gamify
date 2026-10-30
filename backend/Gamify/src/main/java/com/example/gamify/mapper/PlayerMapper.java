@@ -6,6 +6,8 @@ import com.example.gamify.entity.EfootballProfile;
 import com.example.gamify.entity.Game;
 import com.example.gamify.entity.GtaProfile;
 import com.example.gamify.entity.Player;
+import com.example.gamify.media.MediaStorage;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -13,7 +15,10 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@RequiredArgsConstructor
 public class PlayerMapper {
+
+    private final MediaStorage mediaStorage;
 
     public PlayerResponse toPlayerResponse(Player player) {
         return toPlayerResponse(player, false);
@@ -35,7 +40,8 @@ public class PlayerMapper {
         return new PlayerResponse(
                 player.getPlayerId(),
                 player.getUsername(),
-                includePrivate ? player.getEmail() : null,
+                mediaStorage.url(player.getAvatarKey()),
+                includePrivate ? player.getPhoneNumber() : null,
                 player.getPlayerBio(),
                 player.getLanguage(),
                 player.getCountry(),

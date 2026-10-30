@@ -5,13 +5,17 @@ import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../models/game.dart';
 import '../../providers/connection_provider.dart';
-import '../../providers/news_provider.dart';
+import '../../providers/feed_provider.dart';
 import '../../providers/player_provider.dart';
+import '../../providers/post_provider.dart';
+import '../../widgets/feed_post_card.dart';
 import '../../widgets/game_tile.dart';
 import '../../widgets/news_card.dart';
 import '../../widgets/primary_button.dart';
+import '../tournaments/tournaments_screen.dart';
 
-/// Home: greeting → game picker → Find players → gaming news feed (newest first, older as you scroll).
+/// Home: greeting → game picker → Find players → the feed: friends' posts and your own, best first, with
+/// gaming news worked in, loading more as you scroll.
 class HomeScreen extends StatefulWidget {
   final ValueChanged<Game> onFindPlayers;
 
@@ -26,14 +30,16 @@ class _HomeScreenState extends State<HomeScreen> {
   static const double _loadMoreThreshold = 600;
 
   final _scrollController = ScrollController();
+  // The player's posts as last seen; when they share or delete one, the feed reloads to match
+  int? _postsVersion;
 
   @override
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final news = Provider.of<NewsProvider>(context, listen: false);
-      if (!news.hasLoaded) news.refresh();
+      final feed = Provider.of<FeedProvider>(context, listen: false);
+      if (!feed.hasLoaded) feed.refresh();
     });
   }
 
@@ -46,33 +52,40 @@ class _HomeScreenState extends State<HomeScreen> {
   void _onScroll() {
     final position = _scrollController.position;
     if (position.pixels >= position.maxScrollExtent - _loadMoreThreshold) {
-      Provider.of<NewsProvider>(context, listen: false).loadMore();
+      Provider.of<FeedProvider>(context, listen: false).loadMore();
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final players = Provider.of<PlayerProvider>(context);
-    final news = Provider.of<NewsProvider>(context);
-    final items = news.items;
+    final feed = Provider.of<FeedProvider>(context);
+    final postsVersion = Provider.of<PostProvider>(context).postsVersion;
+    if (_postsVersion != postsVersion) {
+      if (_postsVersion != null) WidgetsBinding.instance.addPostFrameCallback((_) => feed.refresh());
+      _postsVersion = postsVersion;
+    }
+    final items = feed.items;
 
     return RefreshIndicator(
       onRefresh: () => Future.wait([
         players.fetchMyProfile(),
         Provider.of<ConnectionProvider>(context, listen: false).fetchConnections(),
-        news.refresh(),
+        feed.refresh(),
       ]),
-      // Header, then one card per story, then a loading/end row
+      // Header, then one card per post or story, then a loading/end row
       child: ListView.builder(
         controller: _scrollController,
         padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.xs, AppSpacing.gutter, AppSpacing.lg),
         itemCount: items.length + 2,
         itemBuilder: (context, index) {
           if (index == 0) return _buildHeader(context, players);
-          if (index == items.length + 1) return _buildFooter(news);
+          if (index == items.length + 1) return _buildFooter(feed);
+          final item = items[index - 1];
           return Padding(
+            key: ValueKey(item.key),
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: NewsCard(item: items[index - 1]),
+            child: item.isPost ? FeedPostCard(post: item.post!) : NewsCard(item: item.news!),
           );
         },
       ),
@@ -120,42 +133,51 @@ class _HomeScreenState extends State<HomeScreen> {
           icon: Icons.search,
           onPressed: () => widget.onFindPlayers(selected),
         ),
+        const SizedBox(height: AppSpacing.xs),
+        SizedBox(
+          height: 48,
+          child: OutlinedButton.icon(
+            onPressed: () => TournamentsScreen.open(context, game: selected),
+            icon: const Icon(Icons.emoji_events_outlined),
+            label: Text('${selected.shortLabel} tournaments'),
+          ),
+        ),
         const SizedBox(height: AppSpacing.lg),
-        Text('LATEST GAMING NEWS', style: AppFonts.label()),
+        Text('YOUR FEED', style: AppFonts.label()),
         const SizedBox(height: AppSpacing.sm),
       ],
     );
   }
 
-  Widget _buildFooter(NewsProvider news) {
-    if (news.errorMessage == null && news.hasMore && news.items.isNotEmpty) {
+  Widget _buildFooter(FeedProvider feed) {
+    if (feed.errorMessage == null && feed.hasMore && feed.items.isNotEmpty) {
       // Reaching this row means the player scrolled to the end; fetch the next page if it isn't already coming
-      if (!news.isLoading) {
-        WidgetsBinding.instance.addPostFrameCallback((_) => news.loadMore());
+      if (!feed.isLoading) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => feed.loadMore());
       }
     }
-    if (news.isLoading || (news.errorMessage == null && news.hasMore && news.items.isNotEmpty)) {
+    if (feed.isLoading || (feed.errorMessage == null && feed.hasMore && feed.items.isNotEmpty)) {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
         child: Center(child: SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2.5))),
       );
     }
-    if (news.errorMessage != null) {
+    if (feed.errorMessage != null) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
         child: Column(
           children: [
-            Text(news.errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
+            Text(feed.errorMessage!, textAlign: TextAlign.center, style: const TextStyle(color: AppColors.textSecondary)),
             const SizedBox(height: AppSpacing.xs),
             OutlinedButton(
-              onPressed: news.items.isEmpty ? news.refresh : news.loadMore,
+              onPressed: feed.items.isEmpty ? feed.refresh : feed.loadMore,
               child: const Text('Try again'),
             ),
           ],
         ),
       );
     }
-    final message = news.items.isEmpty ? 'No news yet. Check back soon.' : "You're all caught up";
+    final message = feed.items.isEmpty ? 'Nothing here yet. Add friends or share a post.' : "You're all caught up";
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
       child: Center(child: Text(message.toUpperCase(), style: AppFonts.label(fontWeight: FontWeight.w500))),

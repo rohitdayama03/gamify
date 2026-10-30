@@ -1,8 +1,11 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/api/api_error.dart';
+import '../core/api/direct_upload.dart';
 import '../models/game.dart';
 import '../models/player_model.dart';
 
@@ -15,6 +18,7 @@ class PlayerProvider extends ChangeNotifier {
   bool _isSearching = false;
   String? _errorMessage;
   bool _sessionExpired = false;
+  bool _savingAvatar = false;
   // Game named by the latest search text (sent back by the backend), e.g. "gta" -> Game.gta
   Game? _matchedGame;
   int _searchRequestId = 0;
@@ -27,6 +31,7 @@ class PlayerProvider extends ChangeNotifier {
   bool get isSearching => _isSearching;
   String? get errorMessage => _errorMessage;
   bool get sessionExpired => _sessionExpired;
+  bool get savingAvatar => _savingAvatar;
   Game? get matchedGame => _matchedGame;
 
   /// Returns false when the profile couldn't be loaded; [sessionExpired] says whether signing in again will help.
@@ -60,6 +65,46 @@ class PlayerProvider extends ChangeNotifier {
       _errorMessage = apiErrorMessage(e, 'Update failed');
       notifyListeners();
       return false;
+    }
+  }
+
+  /// Makes [jpeg], already cropped square, the profile picture: uploads it straight to S3, then saves it.
+  Future<bool> setAvatar(Uint8List jpeg) => _changeAvatar('Could not update your picture', () async {
+        final start = await _apiClient.dio.post(
+          ApiEndpoints.avatarUpload,
+          data: {'contentType': 'image/jpeg', 'size': jpeg.length},
+        );
+        final ticket = UploadTicket.listFromSession(start.data).first;
+        final uploadError = await DirectUpload.put(ticket, jpeg);
+        if (uploadError != null) {
+          _errorMessage = uploadError;
+          return null;
+        }
+        return _apiClient.dio.put(ApiEndpoints.avatar, data: {'key': ticket.key});
+      });
+
+  /// Back to showing the player's initial.
+  Future<bool> removeAvatar() =>
+      _changeAvatar('Could not remove your picture', () => _apiClient.dio.delete(ApiEndpoints.avatar));
+
+  // Runs a picture change that answers with the updated profile; null from [request] means it failed
+  // with [errorMessage] already set
+  Future<bool> _changeAvatar(String fallbackError, Future<Response?> Function() request) async {
+    if (_savingAvatar) return false;
+    _savingAvatar = true;
+    notifyListeners();
+    try {
+      final response = await request();
+      if (response == null) return false;
+      _currentPlayer = PlayerResponse.fromJson(response.data);
+      _errorMessage = null;
+      return true;
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, fallbackError);
+      return false;
+    } finally {
+      _savingAvatar = false;
+      notifyListeners();
     }
   }
 

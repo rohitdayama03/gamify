@@ -213,7 +213,7 @@ public class NewsServiceImpl implements NewsService {
         return value == null || value.length() <= max ? value : value.substring(0, max);
     }
 
-    private static NewsItemResponse toResponse(NewsItem item) {
+    public static NewsItemResponse toResponse(NewsItem item) {
         return new NewsItemResponse(
                 item.getId(),
                 item.getTitle(),

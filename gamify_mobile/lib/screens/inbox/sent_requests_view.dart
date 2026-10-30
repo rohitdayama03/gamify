@@ -8,6 +8,7 @@ import '../../models/connection_model.dart';
 import '../../providers/connection_provider.dart';
 import '../messages/messages_screen.dart';
 import '../player/player_profile_screen.dart';
+import '../../widgets/player_avatar.dart';
 
 /// Requests the player has sent: pending ones can be cancelled, accepted ones lead to chat.
 class SentRequestsView extends StatelessWidget {
@@ -132,19 +133,7 @@ class _SentRequestCard extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  CircleAvatar(
-                    radius: 22,
-                    backgroundColor: AppColors.surfaceAlt,
-                    child: Text(
-                      player.username.isEmpty
-                          ? '?'
-                          : player.username[0].toUpperCase(),
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
+                  PlayerAvatar(name: player.username, url: player.avatarUrl, radius: 22),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Column(

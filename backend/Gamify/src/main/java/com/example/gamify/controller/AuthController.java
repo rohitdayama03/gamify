@@ -15,6 +15,12 @@ public class AuthController {
 
     private final AuthService authService;
 
+    // Sends a sign-in code on WhatsApp for registering or logging in
+    @PostMapping("/otp")
+    public ResponseEntity<SendOtpResponse> sendOtp(@Valid @RequestBody SendOtpRequest request) {
+        return ResponseEntity.ok(authService.sendOtp(request));
+    }
+
     @PostMapping("/register")
     public ResponseEntity<AuthResponse> register(@Valid @RequestBody RegisterRequest request) {
         AuthResponse response = authService.register(request);
@@ -25,18 +31,6 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody LoginRequest request) {
         AuthResponse response = authService.login(request);
         return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/forgot-password/question")
-    public ResponseEntity<SecretQuestionResponse> getSecretQuestion(@RequestParam String username) {
-        SecretQuestionResponse response = authService.getSecretQuestion(username);
-        return ResponseEntity.ok(response);
-    }
-
-    @PostMapping("/forgot-password/reset")
-    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
-        authService.resetPassword(request);
-        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/logout")

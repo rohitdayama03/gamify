@@ -33,7 +33,11 @@ public class CurrentUsernameArgumentResolver implements HandlerMethodArgumentRes
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
                                   NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        String authHeader = webRequest.getHeader(HttpHeaders.AUTHORIZATION);
+        return requireUsername(webRequest.getHeader(HttpHeaders.AUTHORIZATION));
+    }
+
+    /** The username in a valid "Bearer <jwt>" header; throws {@link UnauthorizedException} otherwise. */
+    public String requireUsername(String authHeader) {
         if (authHeader == null || !authHeader.startsWith(BEARER_PREFIX)) {
             throw new UnauthorizedException("Missing or invalid Authorization header");
         }

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
 import '../../providers/auth_provider.dart';
-import '../../providers/news_provider.dart';
+import '../../providers/feed_provider.dart';
 import '../../providers/player_provider.dart';
 import '../auth/welcome_screen.dart';
 import '../profile/edit_profile_screen.dart';
@@ -18,7 +18,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-          "You'll need your username and password to sign back in.",
+          "To sign back in, we'll send a code to your WhatsApp number.",
         ),
         actions: [
           TextButton(
@@ -36,7 +36,7 @@ class SettingsScreen extends StatelessWidget {
     await Provider.of<AuthProvider>(context, listen: false).logout();
     if (!context.mounted) return;
     Provider.of<PlayerProvider>(context, listen: false).clear();
-    Provider.of<NewsProvider>(context, listen: false).clear();
+    Provider.of<FeedProvider>(context, listen: false).clear();
     Navigator.pushAndRemoveUntil(
       context,
       MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -61,7 +61,7 @@ class SettingsScreen extends StatelessWidget {
                 leading: const Icon(Icons.person_outline),
                 title: Text(me?.username ?? ''),
                 subtitle: Text(
-                  me?.email ?? 'No email on file',
+                  me?.phoneNumber ?? 'No phone number on file',
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ),
