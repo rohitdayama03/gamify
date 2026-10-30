@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1079615692912:android:9006c4a3417664b403d4b5",
+        "mobilesdk_app_id": "1:1079615692912:android:b8caedb9f37ba18203d4b5",
         "android_client_info": {
-          "package_name": "com.example.gamify_mobile"
+          "package_name": "io.gamifyapp.android"
         }
       },
       "oauth_client": [],

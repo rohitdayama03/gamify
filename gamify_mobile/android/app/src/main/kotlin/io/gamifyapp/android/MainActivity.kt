@@ -1,4 +1,4 @@
-package com.example.gamify_mobile
+package io.gamifyapp.android
 
 import io.flutter.embedding.android.FlutterActivity
 
