@@ -18,6 +18,10 @@ import java.util.List;
 
 public class PlayerSpecification {
 
+    public static Specification<Player> isNotPlayer(String username) {
+        return (root, query, cb) -> cb.notEqual(root.get("username"), username);
+    }
+
     public static Specification<Player> filterPlayers(
             String username,
             String country,

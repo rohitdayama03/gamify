@@ -23,6 +23,7 @@ public class PlayerSearchServiceImpl implements PlayerSearchService {
     @Override
     @Transactional(readOnly = true)
     public Page<PlayerResponse> searchPlayers(
+            String currentUsername,
             String searchText,
             Game matchedGame,
             String username,
@@ -38,6 +39,8 @@ public class PlayerSearchServiceImpl implements PlayerSearchService {
         Specification<Player> spec = PlayerSpecification.filterPlayers(
                 username, country, language, game, gtaPlatform, gtaActivity, bgmiRole, efootballTier
         );
+        // Players never see themselves in Discover
+        spec = spec.and(PlayerSpecification.isNotPlayer(currentUsername));
         if (searchText != null && !searchText.isBlank()) {
             spec = spec.and(PlayerSpecification.matchesSearchText(searchText, matchedGame));
         }

@@ -198,7 +198,11 @@ class DiscoverScreenState extends State<DiscoverScreen> {
   @override
   Widget build(BuildContext context) {
     final playerProvider = Provider.of<PlayerProvider>(context);
-    final players = playerProvider.searchResults;
+    final myId = playerProvider.currentPlayer?.playerId;
+    // The server already leaves the caller out; this covers older servers
+    final players = playerProvider.searchResults
+        .where((p) => p.playerId != myId)
+        .toList();
 
     return Scaffold(
       body: SafeArea(
@@ -211,11 +215,7 @@ class DiscoverScreenState extends State<DiscoverScreen> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async => _search(),
-                child: _buildResults(
-                  playerProvider,
-                  players,
-                  playerProvider.currentPlayer?.playerId,
-                ),
+                child: _buildResults(playerProvider, players),
               ),
             ),
           ],
@@ -382,7 +382,6 @@ class DiscoverScreenState extends State<DiscoverScreen> {
   Widget _buildResults(
     PlayerProvider provider,
     List<PlayerResponse> players,
-    int? myId,
   ) {
     if (provider.isSearching && players.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -436,10 +435,7 @@ class DiscoverScreenState extends State<DiscoverScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       itemCount: players.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (_, index) => _PlayerCard(
-        player: players[index],
-        isMe: players[index].playerId == myId,
-      ),
+      itemBuilder: (_, index) => _PlayerCard(player: players[index]),
     );
   }
 }
@@ -553,9 +549,8 @@ class _FilterSheetState extends State<_FilterSheet> {
 
 class _PlayerCard extends StatelessWidget {
   final PlayerResponse player;
-  final bool isMe;
 
-  const _PlayerCard({required this.player, required this.isMe});
+  const _PlayerCard({required this.player});
 
   @override
   Widget build(BuildContext context) {
@@ -642,10 +637,8 @@ class _PlayerCard extends StatelessWidget {
                             ),
                         ],
                       ),
-                      if (!isMe) ...[
-                        const SizedBox(height: 12),
-                        ConnectButton(player: player),
-                      ],
+                      const SizedBox(height: 12),
+                      ConnectButton(player: player),
                     ],
                   ),
                 ),

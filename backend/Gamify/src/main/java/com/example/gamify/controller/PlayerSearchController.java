@@ -9,6 +9,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -23,6 +24,7 @@ public class PlayerSearchController {
 
     @GetMapping("/search")
     public ResponseEntity<Page<PlayerResponse>> searchPlayers(
+            @AuthenticationPrincipal String currentUsername,
             @RequestParam(required = false) String q,
             @RequestParam(required = false) String username,
             @RequestParam(required = false) String country,
@@ -46,7 +48,7 @@ public class PlayerSearchController {
         Pageable pageable = searchText == null ? PageRequest.of(page, size, sort) : PageRequest.of(page, size);
 
         Page<PlayerResponse> result = searchService.searchPlayers(
-                searchText, matchedGame, username, country, language, game, gtaPlatform, gtaActivity, bgmiRole, efootballTier, pageable
+                currentUsername, searchText, matchedGame, username, country, language, game, gtaPlatform, gtaActivity, bgmiRole, efootballTier, pageable
         );
 
         ResponseEntity.BodyBuilder response = ResponseEntity.ok();

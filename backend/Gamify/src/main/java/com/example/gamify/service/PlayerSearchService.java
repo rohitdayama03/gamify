@@ -7,10 +7,12 @@ import org.springframework.data.domain.Pageable;
 
 public interface PlayerSearchService {
     /**
+     * @param currentUsername the caller, who is left out of the results
      * @param searchText  free text matched against usernames (prefix) and game names; ignored if blank
      * @param matchedGame the game [searchText] names, if any, so its players are included
      */
     Page<PlayerResponse> searchPlayers(
+            String currentUsername,
             String searchText,
             Game matchedGame,
             String username,
