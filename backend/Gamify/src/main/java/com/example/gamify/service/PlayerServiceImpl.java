@@ -117,6 +117,7 @@ public class PlayerServiceImpl implements PlayerService {
         BgmiProfile bgmiProfile = bgmiProfileRepository.findByPlayer(player)
                 .orElseGet(() -> BgmiProfile.builder().player(player).build());
 
+        bgmiProfile.setInGameName(request.inGameName().trim());
         bgmiProfile.setBgmiId(request.bgmiId());
         bgmiProfile.setCurrentRole(request.currentRole());
         bgmiProfile.setExperience(request.experience());
@@ -149,6 +150,7 @@ public class PlayerServiceImpl implements PlayerService {
         EfootballProfile efootballProfile = efootballProfileRepository.findByPlayer(player)
                 .orElseGet(() -> EfootballProfile.builder().player(player).build());
 
+        efootballProfile.setInGameName(request.inGameName().trim());
         efootballProfile.setEfootballId(request.efootballId());
         efootballProfile.setHighTier(request.highTier());
 

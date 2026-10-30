@@ -23,6 +23,10 @@ public class EfootballProfile {
     @JoinColumn(name = "player_id", referencedColumnName = "player_id", nullable = false, unique = true)
     private Player player;
 
+    // Name shown on the profile card; nullable since profiles saved before it was added don't have one
+    @Column(name = "in_game_name", length = 50)
+    private String inGameName;
+
     @Column(name = "efootball_id", nullable = false, length = 50)
     private String efootballId;
 

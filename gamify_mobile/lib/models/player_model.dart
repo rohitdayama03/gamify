@@ -28,6 +28,8 @@ class GtaProfileResponse {
 
 class BgmiProfileResponse {
   final int? id;
+  // Missing on profiles saved before the field existed
+  final String? inGameName;
   final String bgmiId;
   final String? currentRole;
   final String? experience;
@@ -37,6 +39,7 @@ class BgmiProfileResponse {
 
   BgmiProfileResponse({
     this.id,
+    this.inGameName,
     required this.bgmiId,
     this.currentRole,
     this.experience,
@@ -48,6 +51,7 @@ class BgmiProfileResponse {
   factory BgmiProfileResponse.fromJson(Map<String, dynamic> json) {
     return BgmiProfileResponse(
       id: json['id'],
+      inGameName: json['inGameName'],
       bgmiId: json['bgmiId'],
       currentRole: json['currentRole'],
       experience: json['experience'],
@@ -60,11 +64,14 @@ class BgmiProfileResponse {
 
 class EfootballProfileResponse {
   final int? id;
+  // Missing on profiles saved before the field existed
+  final String? inGameName;
   final String efootballId;
   final String? highTier;
 
   EfootballProfileResponse({
     this.id,
+    this.inGameName,
     required this.efootballId,
     this.highTier,
   });
@@ -72,6 +79,7 @@ class EfootballProfileResponse {
   factory EfootballProfileResponse.fromJson(Map<String, dynamic> json) {
     return EfootballProfileResponse(
       id: json['id'],
+      inGameName: json['inGameName'],
       efootballId: json['efootballId'],
       highTier: json['highTier'],
     );

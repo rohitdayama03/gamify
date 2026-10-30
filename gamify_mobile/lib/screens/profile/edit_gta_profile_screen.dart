@@ -171,13 +171,13 @@ class _EditGtaProfileScreenState extends State<EditGtaProfileScreen> {
                 maxLength: 50,
                 textInputAction: TextInputAction.next,
                 decoration: const InputDecoration(
-                  labelText: 'Character name',
+                  labelText: 'In-game name',
                   prefixIcon: Icon(Icons.badge_outlined),
                   helperText: 'The name other players see in GTA Online.',
                   counterText: '',
                 ),
                 validator: (v) => (v == null || v.trim().isEmpty)
-                    ? 'Enter your character name'
+                    ? 'Enter your in-game name'
                     : null,
               ),
               _Section(

@@ -86,6 +86,7 @@ public class PlayerMapper {
 
         return new BgmiProfileResponse(
                 profile.getId(),
+                profile.getInGameName(),
                 profile.getBgmiId(),
                 profile.getCurrentRole(),
                 profile.getExperience(),
@@ -102,6 +103,7 @@ public class PlayerMapper {
 
         return new EfootballProfileResponse(
                 profile.getId(),
+                profile.getInGameName(),
                 profile.getEfootballId(),
                 profile.getHighTier()
         );

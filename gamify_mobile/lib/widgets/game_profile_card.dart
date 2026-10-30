@@ -400,7 +400,7 @@ class _GameProfileView {
         final bgmi = player.bgmiProfile;
         if (bgmi == null) return null;
         return _GameProfileView(
-          title: bgmi.bgmiId,
+          title: _text(bgmi.inGameName) ?? bgmi.bgmiId,
           meta: [game.shortLabel, ?country],
           chips: [?_text(bgmi.currentRole)],
           tagsLabel: 'Looking for',
@@ -409,6 +409,7 @@ class _GameProfileView {
               (icon: Icons.groups_outlined, label: v),
           ],
           facts: [
+            ('BGMI ID', bgmi.bgmiId),
             if (_text(bgmi.experience) case final v?) ('Experience', v),
             if (languages != null) ('Language', languages),
             if (_text(bgmi.availableTime) case final v?) ('Availability', v),
@@ -419,10 +420,13 @@ class _GameProfileView {
         final efootball = player.efootballProfile;
         if (efootball == null) return null;
         return _GameProfileView(
-          title: efootball.efootballId,
+          title: _text(efootball.inGameName) ?? efootball.efootballId,
           meta: [game.shortLabel, ?country],
           chips: [?_text(efootball.highTier)],
-          facts: [if (languages != null) ('Language', languages)],
+          facts: [
+            ('eFootball ID', efootball.efootballId),
+            if (languages != null) ('Language', languages),
+          ],
         );
     }
   }
