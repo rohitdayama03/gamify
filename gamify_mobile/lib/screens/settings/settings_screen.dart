@@ -18,7 +18,7 @@ class SettingsScreen extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Sign out?'),
         content: const Text(
-          "To sign back in, we'll send a code to your WhatsApp number.",
+          "To sign back in, we'll send a code to your phone number.",
         ),
         actions: [
           TextButton(

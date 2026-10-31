@@ -1,3 +1,5 @@
+import '../core/api/msg91_otp.dart';
+
 class AuthResponse {
   final String token;
   final String tokenType;
@@ -23,17 +25,13 @@ class AuthResponse {
 
 enum OtpPurpose { register, login }
 
-/// Reply to a code request: how long the code works and how many more can be sent today.
+/// A code that has been sent. With MSG91 the widget sent it and [msg91]/[reqId] check it; otherwise the
+/// server issued it (testing) and limits how many can be sent per day.
 class OtpSent {
-  final Duration expiresIn;
-  final int remainingToday;
+  final Msg91Otp? msg91;
+  final String? reqId;
+  // Null with MSG91, which keeps its own limits
+  final int? remainingToday;
 
-  OtpSent({required this.expiresIn, required this.remainingToday});
-
-  factory OtpSent.fromJson(Map<String, dynamic> json) {
-    return OtpSent(
-      expiresIn: Duration(seconds: json['expiresInSeconds']),
-      remainingToday: json['remainingToday'],
-    );
-  }
+  const OtpSent({this.msg91, this.reqId, this.remainingToday});
 }

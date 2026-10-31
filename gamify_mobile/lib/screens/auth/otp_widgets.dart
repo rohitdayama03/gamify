@@ -73,7 +73,7 @@ class PhoneNumberField extends StatelessWidget {
             onChanged: onChanged,
             onFieldSubmitted: onSubmitted,
             decoration: const InputDecoration(
-              labelText: 'WhatsApp number',
+              labelText: 'Phone number',
               prefixIcon: Icon(Icons.phone_outlined),
             ),
             validator: (v) {
@@ -89,11 +89,12 @@ class PhoneNumberField extends StatelessWidget {
   }
 }
 
-/// Second step of sign-in: the code sent on WhatsApp, with resend and change-number links.
+/// Second step of sign-in: the code that was sent, with resend and change-number links.
 class OtpCodeStep extends StatefulWidget {
   final String phoneNumber;
   final TextEditingController controller;
-  final int remainingToday;
+  // Codes the server can still issue today; null when MSG91 sends them and keeps its own limits
+  final int? remainingToday;
   final bool busy;
   final ValueChanged<String> onCompleted;
   final Future<void> Function() onResend;
@@ -103,7 +104,7 @@ class OtpCodeStep extends StatefulWidget {
     super.key,
     required this.phoneNumber,
     required this.controller,
-    required this.remainingToday,
+    this.remainingToday,
     required this.busy,
     required this.onCompleted,
     required this.onResend,
@@ -152,7 +153,7 @@ class _OtpCodeStepState extends State<OtpCodeStep> {
   @override
   Widget build(BuildContext context) {
     final canResend =
-        _secondsLeft <= 0 && widget.remainingToday > 0 && !widget.busy;
+        _secondsLeft <= 0 && widget.remainingToday != 0 && !widget.busy;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -163,7 +164,7 @@ class _OtpCodeStepState extends State<OtpCodeStep> {
               child: Text.rich(
                 TextSpan(
                   text:
-                      'We sent a ${OtpCodeStep.codeLength}-digit code on WhatsApp to ',
+                      'We sent a ${OtpCodeStep.codeLength}-digit code to ',
                   children: [
                     TextSpan(
                       text: widget.phoneNumber,

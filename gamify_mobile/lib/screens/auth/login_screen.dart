@@ -61,6 +61,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  Future<void> _resend() async {
+    setState(() => _error = null);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sent = await auth.resendOtp(
+      _otpSent!,
+      phoneNumber: _phoneNumber,
+      purpose: OtpPurpose.login,
+    );
+    if (!mounted) return;
+    setState(() {
+      if (sent != null) {
+        _otpSent = sent;
+        _codeController.clear();
+      } else {
+        _error = auth.errorMessage ?? 'Could not resend the code.';
+      }
+    });
+  }
+
   Future<void> _verify() async {
     setState(() {
       _submitted = true;
@@ -71,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final success = await auth.login(
       phoneNumber: _phoneNumber,
+      sent: _otpSent!,
       otp: _codeController.text,
     );
     if (!mounted) return;
@@ -122,7 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       const Text(
-                        "Sign in with your WhatsApp number. We'll send you a code.",
+                        "Sign in with your phone number. We'll send you a code.",
                         style: TextStyle(color: AppColors.textSecondary),
                       ),
                       const SizedBox(height: AppSpacing.lg),
@@ -142,7 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           remainingToday: otpSent.remainingToday,
                           busy: auth.isLoading,
                           onCompleted: (_) => _verify(),
-                          onResend: _sendCode,
+                          onResend: _resend,
                           onChangeNumber: () => setState(() {
                             _otpSent = null;
                             _error = null;

@@ -15,7 +15,7 @@ public class AuthController {
 
     private final AuthService authService;
 
-    // Sends a sign-in code on WhatsApp for registering or logging in
+    // Checks the number can register or log in, then says how the app gets the code (MSG91, or issued here when testing)
     @PostMapping("/otp")
     public ResponseEntity<SendOtpResponse> sendOtp(@Valid @RequestBody SendOtpRequest request) {
         return ResponseEntity.ok(authService.sendOtp(request));

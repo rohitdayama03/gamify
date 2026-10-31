@@ -5,7 +5,7 @@ import lombok.*;
 
 import java.time.OffsetDateTime;
 
-/** One code sent to a phone number; also the record the daily send limit is counted from. */
+/** A code the server issued itself (testing without MSG91); the send limits are counted from OtpRequest. */
 @Entity
 @Table(name = "otp_codes", indexes = {
         @Index(name = "idx_otp_phone_created", columnList = "phone_number, created_at")

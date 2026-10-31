@@ -77,6 +77,26 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
   }
 
+  Future<void> _resend() async {
+    setState(_clearErrors);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sent = await auth.resendOtp(
+      _otpSent!,
+      phoneNumber: _phoneNumber,
+      purpose: OtpPurpose.register,
+      username: _usernameController.text.trim(),
+    );
+    if (!mounted) return;
+    if (sent != null) {
+      setState(() {
+        _otpSent = sent;
+        _codeController.clear();
+      });
+    } else {
+      _showServerError(auth.errorMessage ?? 'Could not resend the code.');
+    }
+  }
+
   Future<void> _handleRegister() async {
     setState(() {
       _submitted = true;
@@ -88,6 +108,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final success = await auth.register(
       username: _usernameController.text.trim(),
       phoneNumber: _phoneNumber,
+      sent: _otpSent!,
       otp: _codeController.text,
       acceptedTerms: _acceptedTerms,
     );
@@ -186,7 +207,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           remainingToday: otpSent.remainingToday,
                           busy: auth.isLoading,
                           onCompleted: (_) => _handleRegister(),
-                          onResend: _sendCode,
+                          onResend: _resend,
                           onChangeNumber: () => setState(() {
                             _otpSent = null;
                             _submitted = false;
@@ -279,7 +300,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     const Padding(
       padding: EdgeInsets.only(top: 6, left: AppSpacing.sm),
       child: Text(
-        "You'll sign in with a code we send to this number on WhatsApp.",
+        "You'll sign in with a code we send to this number.",
         style: TextStyle(fontSize: 12.5, color: AppColors.textSecondary),
       ),
     ),
