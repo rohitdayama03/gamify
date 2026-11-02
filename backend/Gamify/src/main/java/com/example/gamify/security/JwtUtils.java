@@ -21,8 +21,8 @@ public class JwtUtils {
     @Value("${app.jwt.secret:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}")
     private String jwtSecret;
 
-    // Default expiration: 24 hours in milliseconds
-    @Value("${app.jwt.expiration-ms:86400000}")
+    // Default expiration: 365 days in milliseconds
+    @Value("${app.jwt.expiration-ms:31536000000}")
     private long jwtExpirationMs;
 
     // In-memory blacklist for invalidated tokens during logout
