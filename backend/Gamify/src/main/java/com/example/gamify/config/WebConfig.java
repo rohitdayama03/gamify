@@ -37,11 +37,12 @@ public class WebConfig implements WebMvcConfigurer {
                 .excludePathPatterns("/api/v1/auth/otp", "/api/v1/auth/register", "/api/v1/auth/login");
     }
 
-    // Public privacy policy and account deletion pages for the store listings; the files are in resources/static
+    // Public privacy policy, account deletion and child safety pages for the store listings; the files are in resources/static
     @Override
     public void addViewControllers(ViewControllerRegistry registry) {
         registry.addViewController("/privacy-policy").setViewName("forward:/privacy-policy.html");
         registry.addViewController("/delete-account").setViewName("forward:/delete-account.html");
+        registry.addViewController("/child-safety").setViewName("forward:/child-safety.html");
     }
 
     // Allows the Flutter web build to call the API; locally it's served from a random localhost port
