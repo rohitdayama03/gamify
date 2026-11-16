@@ -3,591 +3,283 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gaming Platform</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    fontFamily: {
-                        sans: ['Inter', 'sans-serif'],
-                    },
-                    colors: {
-                        brand: {
-                            dark: '#0f172a',    // slate-900
-                            card: '#1e293b',    // slate-800
-                            neon: '#06b6d4',    // cyan-500
-                            accent: '#8b5cf6',  // violet-500
-                            success: '#10b981', // emerald-500
-                            danger: '#ef4444'   // red-500
-                        }
-                    }
-                }
-            }
-        }
-    </script>
+    <title>Gamify – Find teammates, build squads, win tournaments</title>
+    <meta name="description" content="Gamify is the community app for mobile gamers. Find teammates by game, rank, language and schedule, build squads, join tournaments and share your highlights.">
+    <meta property="og:title" content="Gamify – Find teammates, build squads, win tournaments">
+    <meta property="og:description" content="The community app for mobile gamers. Find teammates, build squads, join tournaments and share your highlights.">
+    <meta property="og:image" content="/images/icon-192.png">
+    <link rel="icon" type="image/png" href="/images/icon-192.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #0f172a;
-            color: #f8fafc;
+        :root {
+            --bg: #070a09; --bg2: #0d1311; --card: #111816; --line: #1f2b27;
+            --fg: #eef5f2; --muted: #93a39c; --accent: #4af2a1; --accent-dim: rgba(74, 242, 161, .12);
+            --radius: 16px;
         }
-        
-        /* Custom Scrollbar for a gamer feel */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #0f172a;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #334155;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #06b6d4;
-        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg); color: var(--fg); font: 17px/1.6 "Space Grotesk", system-ui, sans-serif; overflow-x: hidden; }
+        a { color: inherit; text-decoration: none; }
+        img { display: block; max-width: 100%; }
+        .wrap { max-width: 1120px; margin: 0 auto; padding: 0 20px; }
+        .mono { font-family: "JetBrains Mono", ui-monospace, monospace; letter-spacing: .14em; text-transform: uppercase; font-size: 13px; color: var(--accent); }
 
-        /* Neon Glow Effects */
-        .neon-border {
-            box-shadow: 0 0 10px rgba(6, 182, 212, 0.2);
-            border: 1px solid rgba(6, 182, 212, 0.3);
-        }
-        .neon-border:focus-within {
-            box-shadow: 0 0 15px rgba(139, 92, 246, 0.4);
-            border-color: rgba(139, 92, 246, 0.8);
-        }
-        
-        .neon-btn {
-            position: relative;
-            transition: all 0.3s ease;
-        }
-        .neon-btn:hover {
-            box-shadow: 0 0 15px rgba(6, 182, 212, 0.6);
-            transform: translateY(-1px);
-        }
+        /* Nav */
+        nav { position: sticky; top: 0; z-index: 10; background: rgba(7, 10, 9, .82); backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+        nav .wrap { display: flex; align-items: center; justify-content: space-between; height: 68px; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 22px; letter-spacing: .04em; color: var(--accent); }
+        .brand img { width: 36px; height: 36px; border-radius: 9px; }
+        .nav-links { display: flex; gap: 28px; color: var(--muted); font-size: 15px; }
+        .nav-links a:hover { color: var(--fg); }
 
-        /* Toast Animation */
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+        /* Buttons */
+        .btn { display: inline-flex; align-items: center; gap: 10px; padding: 14px 26px; border-radius: 12px; font-weight: 600; font-size: 17px; transition: transform .15s, box-shadow .15s; }
+        .btn-primary { background: var(--accent); color: #04120b; box-shadow: 0 0 30px rgba(74, 242, 161, .3); }
+        .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 44px rgba(74, 242, 161, .45); }
+        .btn-ghost { border: 1px solid var(--line); color: var(--fg); }
+        .btn-ghost:hover { border-color: var(--accent); }
+        .btn svg { width: 20px; height: 20px; }
+
+        /* Hero */
+        .hero { position: relative; padding: 80px 0 96px; overflow: hidden; }
+        .hero::before { content: ""; position: absolute; inset: 0;
+            background-image: linear-gradient(rgba(74, 242, 161, .05) 1px, transparent 1px), linear-gradient(90deg, rgba(74, 242, 161, .05) 1px, transparent 1px);
+            background-size: 40px 40px; mask-image: radial-gradient(ellipse at 70% 40%, #000 20%, transparent 70%); -webkit-mask-image: radial-gradient(ellipse at 70% 40%, #000 20%, transparent 70%); }
+        .hero::after { content: ""; position: absolute; width: 600px; height: 600px; right: -100px; top: -80px; background: radial-gradient(circle, rgba(74, 242, 161, .18), transparent 65%); pointer-events: none; }
+        .hero .wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1.1fr .9fr; gap: 48px; align-items: center; }
+        h1 { font-size: clamp(40px, 6vw, 68px); line-height: 1.04; font-weight: 700; letter-spacing: -.02em; margin: 18px 0 22px; }
+        h1 span { color: var(--accent); }
+        .lead { font-size: 20px; color: var(--muted); max-width: 540px; }
+        .cta { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 34px; }
+        .games { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 40px; align-items: center; color: var(--muted); font-size: 15px; }
+        .pill { padding: 6px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg2); color: var(--fg); font-size: 14px; }
+
+        /* Phone frame */
+        .phone { position: relative; width: 300px; aspect-ratio: 738 / 1508; border-radius: 40px; padding: 10px; background: linear-gradient(160deg, #2a3632, #0e1412); box-shadow: 0 0 0 1px #2c3a35, 0 30px 80px rgba(0, 0, 0, .6), 0 0 80px rgba(74, 242, 161, .12); }
+        .phone img { width: 100%; height: 100%; object-fit: cover; object-position: top; border-radius: 31px; }
+        .hero .phone { margin: 0 auto; transform: rotate(3deg); }
+
+        /* Sections */
+        section { padding: 96px 0; }
+        .alt { background: var(--bg2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+        .head { max-width: 640px; margin-bottom: 52px; }
+        h2 { font-size: clamp(30px, 4vw, 44px); line-height: 1.1; letter-spacing: -.01em; margin-top: 12px; }
+        .head p { color: var(--muted); margin-top: 14px; font-size: 18px; }
+
+        /* Features */
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 28px; transition: border-color .2s, transform .2s; }
+        .card:hover { border-color: rgba(74, 242, 161, .45); transform: translateY(-3px); }
+        .ic { width: 48px; height: 48px; border-radius: 12px; display: grid; place-items: center; background: var(--accent-dim); color: var(--accent); margin-bottom: 18px; }
+        .ic svg { width: 24px; height: 24px; }
+        .card h3 { font-size: 20px; margin-bottom: 8px; }
+        .card p { color: var(--muted); font-size: 16px; }
+
+        /* Showcase */
+        .show { display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px; }
+        .shot { display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .shot .phone { width: 100%; max-width: 280px; }
+        .shot h3 { margin-top: 28px; font-size: 21px; }
+        .shot p { color: var(--muted); font-size: 16px; margin-top: 6px; max-width: 300px; }
+
+        /* Steps */
+        .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; counter-reset: s; }
+        .step { position: relative; padding: 28px; border-left: 2px solid var(--accent); background: linear-gradient(90deg, var(--accent-dim), transparent 70%); border-radius: 0 var(--radius) var(--radius) 0; }
+        .step::before { counter-increment: s; content: "0" counter(s); font-family: "JetBrains Mono", monospace; font-weight: 700; color: var(--accent); font-size: 14px; letter-spacing: .1em; }
+        .step h3 { font-size: 20px; margin: 10px 0 6px; }
+        .step p { color: var(--muted); font-size: 16px; }
+
+        /* Final CTA */
+        .final { text-align: center; }
+        .final img { width: 96px; height: 96px; border-radius: 22px; margin: 0 auto 26px; box-shadow: 0 0 50px rgba(74, 242, 161, .35); }
+        .final p { color: var(--muted); font-size: 19px; margin: 14px auto 0; max-width: 520px; }
+        .final .cta { justify-content: center; }
+
+        /* Footer */
+        footer { border-top: 1px solid var(--line); padding: 40px 0 48px; color: var(--muted); font-size: 15px; }
+        footer .row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 20px; align-items: center; }
+        footer .links { display: flex; flex-wrap: wrap; gap: 24px; }
+        footer a:hover { color: var(--accent); }
+        .disclaimer { margin-top: 24px; font-size: 13px; line-height: 1.6; color: #6f7f78; max-width: 820px; }
+
+        @media (max-width: 900px) {
+            .hero { padding: 48px 0 72px; }
+            .hero .wrap { grid-template-columns: 1fr; text-align: center; }
+            .lead { margin: 0 auto; }
+            .cta, .games { justify-content: center; }
+            .hero .phone { width: 260px; transform: none; margin-top: 16px; }
+            .grid, .steps { grid-template-columns: 1fr 1fr; }
+            .show { grid-template-columns: 1fr; gap: 64px; }
         }
-        @keyframes fadeOut {
-            from { opacity: 1; }
-            to { opacity: 0; }
-        }
-        .toast {
-            animation: slideInRight 0.3s ease-out forwards;
-        }
-        .toast.hide {
-            animation: fadeOut 0.3s ease-out forwards;
+        @media (max-width: 600px) {
+            body { font-size: 16px; }
+            .wrap { padding: 0 16px; }
+            .nav-links { display: none; }
+            section { padding: 72px 0; }
+            .grid, .steps { grid-template-columns: 1fr; }
+            .btn { width: 100%; justify-content: center; }
         }
     </style>
 </head>
-<body class="h-screen flex overflow-hidden selection:bg-brand-neon selection:text-white">
+<body>
 
-    <!-- Sidebar -->
-    <aside class="w-64 bg-brand-card border-r border-slate-700 flex flex-col hidden md:flex">
-        <div class="p-6 flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-neon to-brand-accent flex items-center justify-center shadow-[0_0_15px_rgba(6,182,212,0.4)]">
-                <i class="fa-solid fa-gamepad text-xl text-white"></i>
-            </div>
-            <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">NEXUS</h1>
+<nav>
+    <div class="wrap">
+        <a class="brand" href="/"><img src="/images/icon-192.png" alt="">GAMIFY</a>
+        <div class="nav-links">
+            <a href="#features">Features</a>
+            <a href="#screens">Screens</a>
+            <a href="#how">How it works</a>
+            <a href="/privacy-policy">Privacy</a>
         </div>
+    </div>
+</nav>
 
-        <nav class="flex-1 px-4 mt-6 space-y-2">
-            <button onclick="switchView('profile-view')" id="nav-profile-view" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg bg-gradient-to-r from-brand-accent/20 to-transparent border-l-2 border-brand-accent text-white font-medium transition-all">
-                <i class="fa-solid fa-user w-5 text-center"></i> My Profile
-            </button>
-            <button onclick="switchView('search-view')" id="nav-search-view" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all border-l-2 border-transparent">
-                <i class="fa-solid fa-magnifying-glass w-5 text-center"></i> Find Players
-            </button>
-            <button onclick="switchView('create-profile-view')" id="nav-create-profile-view" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-lg text-slate-400 hover:text-white hover:bg-slate-700/50 transition-all border-l-2 border-transparent">
-                <i class="fa-solid fa-pen-to-square w-5 text-center"></i> Edit Profile
-            </button>
-        </nav>
-
-        <div class="p-4 border-t border-slate-700">
-            <div class="flex items-center gap-3">
-                <img src="https://placehold.co/40x40/06b6d4/ffffff?text=U" class="w-10 h-10 rounded-full border border-brand-neon" alt="User">
-                <div>
-                    <p class="text-sm font-bold">User123</p>
-                    <p class="text-xs text-brand-success flex items-center gap-1"><i class="fa-solid fa-circle text-[8px]"></i> Online</p>
-                </div>
+<header class="hero">
+    <div class="wrap">
+        <div>
+            <div class="mono">The app for mobile gamers</div>
+            <h1>Find teammates.<br>Build squads.<br><span>Win tournaments.</span></h1>
+            <p class="lead">Gamify connects you with players who match your game, rank, language and schedule, so you never have to queue with randoms again.</p>
+            <div class="cta">
+                <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=io.gamifyapp.android">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 1.8c-.3.3-.4.7-.4 1.2v18c0 .5.1.9.4 1.2l10-10.2-10-10.2zm11.3 11.5 2.7 2.8-11.9 6.8 9.2-9.6zm0-2.6L5.7 1.1l11.9 6.8-2.7 2.8zm6.4.1c.5.3.7.7.7 1.2s-.2.9-.7 1.2l-2.6 1.5-2.9-2.9 2.9-2.9 2.6 1.9z"/></svg>
+                    Download for Android
+                </a>
+                <a class="btn btn-ghost" href="#features">See what's inside</a>
             </div>
-        </div>
-    </aside>
-
-    <!-- Mobile Nav (Bottom) -->
-    <nav class="md:hidden fixed bottom-0 left-0 w-full bg-brand-card border-t border-slate-700 flex justify-around p-3 z-50">
-        <button onclick="switchView('profile-view')" class="text-slate-400 hover:text-brand-neon flex flex-col items-center gap-1">
-            <i class="fa-solid fa-user"></i><span class="text-[10px]">Profile</span>
-        </button>
-        <button onclick="switchView('search-view')" class="text-slate-400 hover:text-brand-neon flex flex-col items-center gap-1">
-            <i class="fa-solid fa-magnifying-glass"></i><span class="text-[10px]">Search</span>
-        </button>
-        <button onclick="switchView('create-profile-view')" class="text-slate-400 hover:text-brand-neon flex flex-col items-center gap-1">
-            <i class="fa-solid fa-pen-to-square"></i><span class="text-[10px]">Edit</span>
-        </button>
-    </nav>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto relative pb-20 md:pb-0">
-        
-        <!-- VIEW 1: PROFILE PAGE -->
-        <div id="profile-view" class="view-section p-6 md:p-10 max-w-6xl mx-auto block">
-            
-            <!-- Profile Header -->
-            <div class="relative rounded-2xl overflow-hidden mb-8 shadow-lg">
-                <div class="h-48 bg-gradient-to-r from-brand-accent to-blue-900 w-full object-cover">
-                    <img src="https://placehold.co/1200x300/1e1b4b/312e81?text=+" class="w-full h-full object-cover opacity-50 mix-blend-overlay" alt="Banner">
-                </div>
-                <div class="absolute bottom-0 left-0 w-full p-6 bg-gradient-to-t from-brand-card to-transparent flex items-end gap-6">
-                    <div class="relative">
-                        <img src="https://placehold.co/120x120/06b6d4/ffffff?text=V" class="w-24 h-24 md:w-32 md:h-32 rounded-full border-4 border-brand-card shadow-[0_0_20px_rgba(6,182,212,0.5)] object-cover" alt="Avatar">
-                        <div class="absolute bottom-1 right-1 w-6 h-6 bg-brand-success rounded-full border-2 border-brand-card" title="Online"></div>
-                    </div>
-                    <div class="pb-2">
-                        <h2 class="text-3xl font-bold flex items-center gap-2">ViperStrike <i class="fa-solid fa-circle-check text-brand-neon text-lg" title="Verified Player"></i></h2>
-                        <p class="text-slate-300">FPS Enthusiast | Tactical Entry Fragger</p>
-                        <div class="flex gap-2 mt-2">
-                            <span class="px-2 py-1 text-xs rounded-md bg-slate-700/80 border border-slate-600"><i class="fa-solid fa-location-dot text-brand-danger"></i> Frankfurt, EU</span>
-                            <span class="px-2 py-1 text-xs rounded-md bg-slate-700/80 border border-slate-600"><i class="fa-solid fa-globe text-blue-400"></i> English, German</span>
-                        </div>
-                    </div>
-                    <div class="ml-auto pb-2 hidden md:block">
-                        <button class="neon-btn bg-brand-neon text-brand-dark px-6 py-2 rounded-lg font-bold">Add Friend</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <!-- Left Column: Ratings -->
-                <div class="lg:col-span-2 space-y-8">
-                    <!-- Ranks/Ratings -->
-                    <div>
-                        <h3 class="text-xl font-bold mb-4 border-b border-slate-700 pb-2"><i class="fa-solid fa-medal text-yellow-500 mr-2"></i> Game Ratings</h3>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <!-- Valorant Card -->
-                            <div class="bg-brand-card rounded-xl p-5 border border-slate-700 hover:border-red-500/50 transition-colors relative overflow-hidden">
-                                <div class="absolute -right-4 -top-4 w-24 h-24 bg-red-500/10 rounded-full blur-xl"></div>
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="font-bold text-lg">Valorant</h4>
-                                    <span class="text-red-400 text-sm font-semibold">Immortal 1</span>
-                                </div>
-                                <div class="flex items-end gap-4 mb-2">
-                                    <div class="text-4xl font-black text-white">1,842 <span class="text-sm font-normal text-slate-400 block">Current MMR</span></div>
-                                </div>
-                                <div class="w-full bg-slate-700 rounded-full h-2 mb-4">
-                                    <div class="bg-gradient-to-r from-red-500 to-red-400 h-2 rounded-full" style="width: 85%"></div>
-                                </div>
-                                <div class="flex justify-between text-xs text-slate-400">
-                                    <span>Matches: 342</span>
-                                    <span>Win Rate: 54.2%</span>
-                                    <span>K/D: 1.18</span>
-                                </div>
-                            </div>
-                            <!-- CS2 Card -->
-                            <div class="bg-brand-card rounded-xl p-5 border border-slate-700 hover:border-yellow-500/50 transition-colors relative overflow-hidden">
-                                <div class="absolute -right-4 -top-4 w-24 h-24 bg-yellow-500/10 rounded-full blur-xl"></div>
-                                <div class="flex justify-between items-center mb-4">
-                                    <h4 class="font-bold text-lg">CS:GO 2</h4>
-                                    <span class="text-yellow-400 text-sm font-semibold">Global Elite</span>
-                                </div>
-                                <div class="flex items-end gap-4 mb-2">
-                                    <div class="text-4xl font-black text-white">16,200 <span class="text-sm font-normal text-slate-400 block">Premier Rating</span></div>
-                                </div>
-                                <div class="w-full bg-slate-700 rounded-full h-2 mb-4">
-                                    <div class="bg-gradient-to-r from-yellow-500 to-yellow-400 h-2 rounded-full" style="width: 95%"></div>
-                                </div>
-                                <div class="flex justify-between text-xs text-slate-400">
-                                    <span>Matches: 1205</span>
-                                    <span>Win Rate: 58.1%</span>
-                                    <span>K/D: 1.25</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Match History -->
-                    <div>
-                        <div class="flex justify-between items-end mb-4 border-b border-slate-700 pb-2">
-                            <h3 class="text-xl font-bold"><i class="fa-solid fa-clock-rotate-left text-brand-neon mr-2"></i> Recent Matches</h3>
-                            <button class="text-sm text-brand-neon hover:underline">View All</button>
-                        </div>
-                        <div class="space-y-3">
-                            <!-- Match Item 1 -->
-                            <div class="bg-brand-card rounded-lg p-4 flex items-center justify-between border border-slate-700 border-l-4 border-l-brand-success">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-slate-900 rounded-md flex items-center justify-center font-bold text-red-500">VAL</div>
-                                    <div>
-                                        <p class="font-bold">Ranked Match <span class="text-slate-400 text-sm font-normal mx-2">• Ascent</span></p>
-                                        <p class="text-sm text-brand-success">Victory (13 - 9)</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-mono font-bold text-white">24/12/5</p>
-                                    <p class="text-xs text-slate-400">2 hours ago</p>
-                                </div>
-                            </div>
-                            <!-- Match Item 2 -->
-                            <div class="bg-brand-card rounded-lg p-4 flex items-center justify-between border border-slate-700 border-l-4 border-l-brand-danger">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 bg-slate-900 rounded-md flex items-center justify-center font-bold text-yellow-500">CS2</div>
-                                    <div>
-                                        <p class="font-bold">Premier <span class="text-slate-400 text-sm font-normal mx-2">• Mirage</span></p>
-                                        <p class="text-sm text-brand-danger">Defeat (11 - 13)</p>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p class="font-mono font-bold text-white">18/19/3</p>
-                                    <p class="text-xs text-slate-400">Yesterday</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Content/Social -->
-                <div class="space-y-6">
-                    <div class="bg-brand-card rounded-xl p-5 border border-slate-700">
-                        <h3 class="font-bold mb-4 border-b border-slate-700 pb-2">Recent Highlights</h3>
-                        <div class="relative rounded-lg overflow-hidden group cursor-pointer">
-                            <img src="https://placehold.co/400x225/334155/94a3b8?text=Clutch+Clip" class="w-full h-auto transition-transform group-hover:scale-105" alt="Video thumbnail">
-                            <div class="absolute inset-0 bg-black/40 flex items-center justify-center group-hover:bg-black/20 transition-all">
-                                <i class="fa-solid fa-play text-3xl text-white opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-all"></i>
-                            </div>
-                            <div class="absolute bottom-2 right-2 bg-black/80 px-2 py-1 text-xs rounded text-white font-mono">0:45</div>
-                        </div>
-                        <p class="text-sm mt-3 font-medium">1v4 Clutch on Ascent B Site! 🔥</p>
-                        <div class="flex gap-4 mt-2 text-xs text-slate-400">
-                            <span><i class="fa-solid fa-heart text-pink-500"></i> 142</span>
-                            <span><i class="fa-solid fa-comment"></i> 12</span>
-                        </div>
-                    </div>
-                </div>
+            <div class="games">
+                <span>Built for</span>
+                <span class="pill">BGMI</span>
+                <span class="pill">eFootball</span>
+                <span class="pill">GTA Online</span>
             </div>
         </div>
+        <div class="phone"><img src="/images/home.jpg" alt="Gamify Home screen: pick a game, find players, browse tournaments and your feed" fetchpriority="high"></div>
+    </div>
+</header>
 
-        <!-- VIEW 2: CREATE/EDIT PROFILE -->
-        <div id="create-profile-view" class="view-section p-6 md:p-10 max-w-4xl mx-auto hidden">
-            <h2 class="text-3xl font-bold mb-2">Build Your Identity</h2>
-            <p class="text-slate-400 mb-8">Set up your profile to find matches, join tournaments, and connect with players.</p>
-
-            <form onsubmit="event.preventDefault(); showNotification('Profile updated successfully!', 'success');" class="bg-brand-card p-6 md:p-8 rounded-2xl border border-slate-700 shadow-xl">
-                
-                <!-- Avatar Upload Mock -->
-                <div class="flex flex-col md:flex-row gap-8 items-center mb-10 pb-8 border-b border-slate-700">
-                    <div class="relative group cursor-pointer">
-                        <div class="w-32 h-32 rounded-full border-2 border-dashed border-slate-500 bg-slate-900 flex flex-col items-center justify-center text-slate-400 group-hover:border-brand-neon group-hover:text-brand-neon transition-colors overflow-hidden">
-                            <img id="avatar-preview" src="https://placehold.co/128x128/0f172a/06b6d4?text=+" class="absolute inset-0 w-full h-full object-cover opacity-50" alt="">
-                            <i class="fa-solid fa-camera text-2xl mb-1 relative z-10"></i>
-                            <span class="text-xs font-semibold relative z-10">Upload</span>
-                        </div>
-                    </div>
-                    <div class="flex-1 w-full">
-                        <label class="block text-sm font-medium text-slate-300 mb-2">In-Game Username (Main)</label>
-                        <input type="text" value="ViperStrike" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors" placeholder="e.g. NinjaPlayer123">
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Primary Game</label>
-                        <div class="relative neon-border rounded-lg bg-slate-900">
-                            <select class="w-full bg-transparent appearance-none border-none px-4 py-3 text-white focus:outline-none">
-                                <option value="valorant">Valorant</option>
-                                <option value="csgo">Counter-Strike 2</option>
-                                <option value="apex">Apex Legends</option>
-                                <option value="lol">League of Legends</option>
-                                <option value="dota">Dota 2</option>
-                            </select>
-                            <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
-                        </div>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-slate-300 mb-2">Region / Location</label>
-                        <div class="relative rounded-lg bg-slate-900 border border-slate-700">
-                            <select class="w-full bg-transparent appearance-none border-none px-4 py-3 text-white focus:outline-none">
-                                <option>EU West</option>
-                                <option>EU East</option>
-                                <option>NA East</option>
-                                <option>NA West</option>
-                                <option>Asia Pacific</option>
-                            </select>
-                            <i class="fa-solid fa-chevron-down absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"></i>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mb-8">
-                    <label class="block text-sm font-medium text-slate-300 mb-2">Bio / Playstyle</label>
-                    <textarea rows="4" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-brand-accent focus:ring-1 focus:ring-brand-accent transition-colors resize-none" placeholder="Tell other players about your roles, times you play, and what kind of team you are looking for..."></textarea>
-                </div>
-
-                <div class="flex justify-end gap-4">
-                    <button type="button" class="px-6 py-3 rounded-lg font-semibold text-slate-300 hover:bg-slate-700 transition-colors">Cancel</button>
-                    <button type="submit" class="neon-btn bg-gradient-to-r from-brand-accent to-brand-neon px-8 py-3 rounded-lg font-bold text-white shadow-lg">Save Profile</button>
-                </div>
-            </form>
+<section id="features" class="alt">
+    <div class="wrap">
+        <div class="head">
+            <div class="mono">Features</div>
+            <h2>Everything your squad needs, in one app</h2>
+            <p>From finding the right players to bragging about the win, Gamify covers the whole game night.</p>
         </div>
-
-        <!-- VIEW 3: PLAYER SEARCH -->
-        <div id="search-view" class="view-section p-6 md:p-10 max-w-7xl mx-auto hidden">
-            
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
-                <div>
-                    <h2 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-brand-neon to-brand-success">Master Search</h2>
-                    <p class="text-slate-400">Find teammates, opponents, or scout for your tournament.</p>
-                </div>
-                <button class="neon-btn bg-brand-card border border-brand-accent text-brand-accent px-4 py-2 rounded-lg font-bold flex items-center gap-2">
-                    <i class="fa-solid fa-plus"></i> Create Lobby
-                </button>
+        <div class="grid">
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></div>
+                <h3>Find the right players</h3>
+                <p>Search by game, country and language. Filter by rank, role and when people play.</p>
             </div>
-
-            <!-- Search Filters -->
-            <div class="bg-brand-card p-4 rounded-xl border border-slate-700 mb-8 flex flex-col md:flex-row gap-4 items-end shadow-lg">
-                <div class="w-full md:w-1/3">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Game</label>
-                    <div class="relative bg-slate-900 rounded-lg border border-slate-700 focus-within:border-brand-neon">
-                        <i class="fa-solid fa-gamepad absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <select class="w-full bg-transparent appearance-none border-none pl-10 pr-4 py-2.5 text-white focus:outline-none">
-                            <option>Valorant</option>
-                            <option>CS:GO 2</option>
-                            <option>Rocket League</option>
-                        </select>
-                    </div>
-                </div>
-                
-                <div class="w-full md:w-1/4">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Skill Rating Min</label>
-                    <input type="number" value="1500" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-brand-neon">
-                </div>
-
-                <div class="w-full md:w-1/4">
-                    <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Region</label>
-                    <div class="relative bg-slate-900 rounded-lg border border-slate-700 focus-within:border-brand-neon">
-                        <i class="fa-solid fa-globe absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"></i>
-                        <select class="w-full bg-transparent appearance-none border-none pl-10 pr-4 py-2.5 text-white focus:outline-none">
-                            <option>Any Region</option>
-                            <option>EU West</option>
-                            <option>NA East</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="w-full md:w-auto flex-1">
-                    <button class="w-full bg-brand-neon hover:bg-cyan-400 text-slate-900 font-bold py-2.5 px-6 rounded-lg transition-colors flex items-center justify-center gap-2">
-                        <i class="fa-solid fa-search"></i> Search
-                    </button>
-                </div>
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="11" r="2.5"/><path d="M14 10h4M14 14h4M6 17c.6-1.6 1.7-2.5 3-2.5s2.4.9 3 2.5"/></svg></div>
+                <h3>Game profiles</h3>
+                <p>Show your in-game name, rank, role, experience and achievements for each game you play.</p>
             </div>
-
-            <!-- Search Results Grid -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                
-                <!-- Player Card 1 -->
-                <div class="bg-brand-card rounded-xl border border-slate-700 overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg">
-                    <div class="p-5 border-b border-slate-700/50 relative">
-                        <div class="absolute top-4 right-4 text-xs font-bold bg-red-500/20 text-red-400 px-2 py-1 rounded border border-red-500/30">VALORANT</div>
-                        <div class="flex gap-4 items-center mb-3">
-                            <div class="relative">
-                                <img src="https://placehold.co/60x60/8b5cf6/ffffff?text=S" class="w-14 h-14 rounded-full border-2 border-brand-card object-cover" alt="User">
-                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-brand-success rounded-full border-2 border-brand-card"></div>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg leading-tight">ShadowNinja</h3>
-                                <p class="text-xs text-slate-400"><i class="fa-solid fa-location-dot"></i> NA East</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-end mt-4">
-                            <div>
-                                <p class="text-xs text-slate-400 mb-1">Rating / Elo</p>
-                                <p class="font-bold text-xl text-white">1,650 <span class="text-xs text-brand-neon font-normal">Diamond 2</span></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-slate-400 mb-1">Win Rate</p>
-                                <p class="font-bold text-white">52.4%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-4 bg-slate-900/50 flex gap-3">
-                        <button onclick="handleInvite(this, 'ShadowNinja')" class="flex-1 bg-gradient-to-r from-brand-accent to-purple-600 hover:from-brand-accent hover:to-brand-accent text-white py-2 rounded-lg text-sm font-bold transition-all shadow-[0_0_10px_rgba(139,92,246,0.3)]">
-                            <i class="fa-solid fa-paper-plane mr-1"></i> Invite
-                        </button>
-                        <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors" title="View Profile">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Player Card 2 -->
-                <div class="bg-brand-card rounded-xl border border-slate-700 overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg">
-                    <div class="p-5 border-b border-slate-700/50 relative">
-                        <div class="absolute top-4 right-4 text-xs font-bold bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded border border-yellow-500/30">CS2</div>
-                        <div class="flex gap-4 items-center mb-3">
-                            <div class="relative">
-                                <img src="https://placehold.co/60x60/10b981/ffffff?text=T" class="w-14 h-14 rounded-full border-2 border-brand-card object-cover" alt="User">
-                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-brand-success rounded-full border-2 border-brand-card"></div>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg leading-tight">ToxicAim</h3>
-                                <p class="text-xs text-slate-400"><i class="fa-solid fa-location-dot"></i> EU West</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-end mt-4">
-                            <div>
-                                <p class="text-xs text-slate-400 mb-1">Premier Rating</p>
-                                <p class="font-bold text-xl text-white">15,400 <span class="text-xs text-yellow-400 font-normal">Sup. Master</span></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-slate-400 mb-1">Win Rate</p>
-                                <p class="font-bold text-white">61.0%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-4 bg-slate-900/50 flex gap-3">
-                        <button onclick="handleInvite(this, 'ToxicAim')" class="flex-1 bg-gradient-to-r from-brand-accent to-purple-600 hover:from-brand-accent hover:to-brand-accent text-white py-2 rounded-lg text-sm font-bold transition-all shadow-[0_0_10px_rgba(139,92,246,0.3)]">
-                            <i class="fa-solid fa-paper-plane mr-1"></i> Invite
-                        </button>
-                        <button class="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-sm transition-colors" title="View Profile">
-                            <i class="fa-solid fa-eye"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Player Card 3 -->
-                <div class="bg-brand-card rounded-xl border border-slate-700 overflow-hidden hover:-translate-y-1 transition-transform duration-300 shadow-lg opacity-75">
-                    <div class="p-5 border-b border-slate-700/50 relative">
-                        <div class="absolute top-4 right-4 text-xs font-bold bg-red-500/20 text-red-400 px-2 py-1 rounded border border-red-500/30">VALORANT</div>
-                        <div class="flex gap-4 items-center mb-3">
-                            <div class="relative">
-                                <img src="https://placehold.co/60x60/f43f5e/ffffff?text=K" class="w-14 h-14 rounded-full border-2 border-brand-card object-cover grayscale" alt="User">
-                                <div class="absolute bottom-0 right-0 w-3 h-3 bg-slate-500 rounded-full border-2 border-brand-card" title="Offline"></div>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-lg leading-tight">KayoMain</h3>
-                                <p class="text-xs text-slate-400"><i class="fa-solid fa-location-dot"></i> Asia Pacific</p>
-                            </div>
-                        </div>
-                        <div class="flex justify-between items-end mt-4">
-                            <div>
-                                <p class="text-xs text-slate-400 mb-1">Rating / Elo</p>
-                                <p class="font-bold text-xl text-white">1,520 <span class="text-xs text-brand-neon font-normal">Plat 3</span></p>
-                            </div>
-                            <div class="text-right">
-                                <p class="text-xs text-slate-400 mb-1">Win Rate</p>
-                                <p class="font-bold text-white">49.8%</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="p-4 bg-slate-900/50 flex gap-3">
-                        <button onclick="handleInvite(this, 'KayoMain')" class="flex-1 bg-slate-700 hover:bg-slate-600 text-slate-300 py-2 rounded-lg text-sm font-bold transition-all">
-                            <i class="fa-solid fa-paper-plane mr-1"></i> Send Offline Invite
-                        </button>
-                    </div>
-                </div>
-
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.8-3.2 3.2-5 6-5s5.2 1.8 6 5M15.5 14.2c2.6-.4 4.7 1.2 5.5 4.3"/></svg></div>
+                <h3>Squads</h3>
+                <p>Create a squad, invite your connections and keep the whole team chatting in one place.</p>
+            </div>
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4zM7 6H4v1a3 3 0 0 0 3 3M17 6h3v1a3 3 0 0 1-3 3"/></svg></div>
+                <h3>Tournaments</h3>
+                <p>Discover tournaments and join with a request, or host your own, post announcements and record results.</p>
+            </div>
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></svg></div>
+                <h3>Share highlights</h3>
+                <p>Post photos and videos of your best moments. Like, comment and follow what's trending in your feed.</p>
+            </div>
+            <div class="card">
+                <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg></div>
+                <h3>Chat and gaming news</h3>
+                <p>Message your connections, get notified about invites and tournament updates, and catch the latest gaming news.</p>
             </div>
         </div>
+    </div>
+</section>
 
-    </main>
+<section id="screens">
+    <div class="wrap">
+        <div class="head">
+            <div class="mono">Inside the app</div>
+            <h2>Made for the way you play</h2>
+            <p>A fast, dark interface that gets you from opening the app to a full lobby in seconds.</p>
+        </div>
+        <div class="show">
+            <div class="shot">
+                <div class="phone"><img src="/images/home.jpg" alt="Home screen with game picker, find players button and feed" loading="lazy"></div>
+                <h3>Pick your game</h3>
+                <p>Choose what you're playing today and jump straight to players and tournaments for it.</p>
+            </div>
+            <div class="shot">
+                <div class="phone"><img src="/images/discover.jpg" alt="Discover screen listing players with game, country and language filters" loading="lazy"></div>
+                <h3>Discover players</h3>
+                <p>Filter by game, country and language, see their rank at a glance and connect in one tap.</p>
+            </div>
+            <div class="shot">
+                <div class="phone"><img src="/images/profile.jpg" alt="Player profile with languages, join date and a GTA Online game profile" loading="lazy"></div>
+                <h3>Build your profile</h3>
+                <p>Your languages, game profiles, rank and posts, all in one place for other players to see.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <!-- Custom Toast Notification Container -->
-    <div id="toast-container" class="fixed top-5 right-5 z-50 flex flex-col gap-3"></div>
+<section id="how" class="alt">
+    <div class="wrap">
+        <div class="head">
+            <div class="mono">How it works</div>
+            <h2>Up and playing in three steps</h2>
+        </div>
+        <div class="steps">
+            <div class="step">
+                <h3>Sign in with your phone</h3>
+                <p>Get a one-time code on WhatsApp or SMS. No password to remember.</p>
+            </div>
+            <div class="step">
+                <h3>Add your game profiles</h3>
+                <p>Tell players what you play, your rank and role, and when you're free.</p>
+            </div>
+            <div class="step">
+                <h3>Connect and squad up</h3>
+                <p>Find teammates, build a squad and enter your first tournament together.</p>
+            </div>
+        </div>
+    </div>
+</section>
 
-    <script>
-        // JS Logic for view switching
-        function switchView(viewId) {
-            // 1. Hide all views
-            const views = document.querySelectorAll('.view-section');
-            views.forEach(view => {
-                view.classList.remove('block');
-                view.classList.add('hidden');
-            });
+<section class="final">
+    <div class="wrap">
+        <img src="/images/icon-192.png" alt="Gamify app icon">
+        <h2>Your next squad is waiting</h2>
+        <p>Join Gamify and start playing with people who play like you.</p>
+        <div class="cta">
+            <a class="btn btn-primary" href="https://play.google.com/store/apps/details?id=io.gamifyapp.android">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.6 1.8c-.3.3-.4.7-.4 1.2v18c0 .5.1.9.4 1.2l10-10.2-10-10.2zm11.3 11.5 2.7 2.8-11.9 6.8 9.2-9.6zm0-2.6L5.7 1.1l11.9 6.8-2.7 2.8zm6.4.1c.5.3.7.7.7 1.2s-.2.9-.7 1.2l-2.6 1.5-2.9-2.9 2.9-2.9 2.6 1.9z"/></svg>
+                Download for Android
+            </a>
+        </div>
+    </div>
+</section>
 
-            // 2. Show target view
-            const targetView = document.getElementById(viewId);
-            if (targetView) {
-                targetView.classList.remove('hidden');
-                targetView.classList.add('block');
-            }
+<footer>
+    <div class="wrap">
+        <div class="row">
+            <a class="brand" href="/"><img src="/images/icon-192.png" alt="">GAMIFY</a>
+            <div class="links">
+                <a href="/privacy-policy">Privacy Policy</a>
+                <a href="/delete-account">Delete Account</a>
+                <a href="mailto:rohit.dayama03@gmail.com">Contact</a>
+            </div>
+        </div>
+        <p class="disclaimer">© 2026 Gamify. Gamify is an independent community app and is not affiliated with, endorsed by or sponsored by the publishers of BGMI, eFootball or GTA Online. All game names, logos and trademarks belong to their respective owners.</p>
+    </div>
+</footer>
 
-            // 3. Update Sidebar Nav states (Desktop)
-            const navBtns = document.querySelectorAll('.nav-btn');
-            navBtns.forEach(btn => {
-                // Reset styling
-                btn.classList.remove('bg-gradient-to-r', 'from-brand-accent/20', 'to-transparent', 'border-brand-accent', 'text-white');
-                btn.classList.add('text-slate-400', 'border-transparent');
-            });
-
-            // Set active styling on target nav
-            const activeNav = document.getElementById(`nav-${viewId}`);
-            if (activeNav) {
-                activeNav.classList.remove('text-slate-400', 'border-transparent');
-                activeNav.classList.add('bg-gradient-to-r', 'from-brand-accent/20', 'to-transparent', 'border-brand-accent', 'text-white');
-            }
-            
-            // Scroll to top
-            document.querySelector('main').scrollTo(0, 0);
-        }
-
-        // JS Logic for custom notifications
-        function showNotification(message, type = 'info') {
-            const container = document.getElementById('toast-container');
-            
-            const toast = document.createElement('div');
-            toast.className = 'toast bg-brand-card border border-slate-700 shadow-xl rounded-lg p-4 flex items-center gap-3 min-w-[250px]';
-            
-            let iconClass = 'fa-solid fa-circle-info text-blue-400';
-            if (type === 'success') {
-                iconClass = 'fa-solid fa-circle-check text-brand-success';
-                toast.classList.add('border-l-4', 'border-l-brand-success');
-            } else if (type === 'warning') {
-                iconClass = 'fa-solid fa-triangle-exclamation text-yellow-500';
-                toast.classList.add('border-l-4', 'border-l-yellow-500');
-            }
-
-            toast.innerHTML = `
-                <i class="${iconClass} text-xl"></i>
-                <span class="font-medium text-sm text-white">${message}</span>
-            `;
-            
-            container.appendChild(toast);
-
-            // Remove toast after 3 seconds
-            setTimeout(() => {
-                toast.classList.add('hide');
-                setTimeout(() => {
-                    if (container.contains(toast)) {
-                        container.removeChild(toast);
-                    }
-                }, 300); // Wait for fade out animation
-            }, 3000);
-        }
-
-        // Logic for handling the invite button click
-        function handleInvite(btnElement, playerName) {
-            // Change button state visually to indicate success
-            const originalHTML = btnElement.innerHTML;
-            btnElement.innerHTML = `<i class="fa-solid fa-check mr-1"></i> Sent!`;
-            btnElement.classList.replace('from-brand-accent', 'from-brand-success');
-            btnElement.classList.replace('to-purple-600', 'to-emerald-500');
-            btnElement.classList.replace('shadow-[0_0_10px_rgba(139,92,246,0.3)]', 'shadow-[0_0_10px_rgba(16,185,129,0.3)]');
-            
-            // Show toast
-            showNotification(`Match invite sent to ${playerName}! Waiting for their response.`, 'success');
-
-            // Reset button after 2 seconds (simulate API handling)
-            setTimeout(() => {
-                btnElement.innerHTML = originalHTML;
-                btnElement.classList.replace('from-brand-success', 'from-brand-accent');
-                btnElement.classList.replace('to-emerald-500', 'to-purple-600');
-                btnElement.classList.replace('shadow-[0_0_10px_rgba(16,185,129,0.3)]', 'shadow-[0_0_10px_rgba(139,92,246,0.3)]');
-            }, 2500);
-        }
-    </script>
 </body>
 </html>
