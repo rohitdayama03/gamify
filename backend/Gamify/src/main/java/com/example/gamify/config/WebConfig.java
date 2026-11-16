@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.List;
@@ -34,6 +35,12 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")
                 .excludePathPatterns("/api/v1/auth/otp", "/api/v1/auth/register", "/api/v1/auth/login");
+    }
+
+    // Public privacy policy page for the store listings; the file is in resources/static
+    @Override
+    public void addViewControllers(ViewControllerRegistry registry) {
+        registry.addViewController("/privacy-policy").setViewName("forward:/privacy-policy.html");
     }
 
     // Allows the Flutter web build to call the API; locally it's served from a random localhost port
