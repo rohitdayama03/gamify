@@ -1,6 +1,7 @@
 import 'chat_model.dart';
 import 'connection_model.dart';
 import 'game.dart';
+import 'tournament_format_model.dart';
 
 DateTime? _parseDate(dynamic value) => value is String ? DateTime.tryParse(value)?.toLocal() : null;
 
@@ -23,8 +24,12 @@ class TournamentSummary {
   final int? maxParticipants;
   final int participantCount;
   final bool completed;
+  // Started and not over yet (tournaments with a format only)
+  final bool inProgress;
   final PlayerSummary organizer;
   final TournamentRole myRole;
+  // Players in a tournament with stages and fixtures; null for a simple tournament
+  final int? slots;
 
   TournamentSummary({
     required this.id,
@@ -35,12 +40,17 @@ class TournamentSummary {
     this.maxParticipants,
     required this.participantCount,
     required this.completed,
+    this.inProgress = false,
     required this.organizer,
     required this.myRole,
+    this.slots,
   });
 
+  bool get hasFormat => slots != null;
+  bool get isOpen => !completed && !inProgress;
   bool get isFull => maxParticipants != null && participantCount >= maxParticipants!;
-  bool get hasStarted => !startsAt.isAfter(DateTime.now());
+  // A tournament with a format starts when the organizer starts it; a simple one at its start time
+  bool get hasStarted => hasFormat ? !isOpen : !startsAt.isAfter(DateTime.now());
   // The organizer and accepted players share the announcements chat
   bool get canOpenChat => myRole == TournamentRole.organizer || myRole == TournamentRole.accepted;
 
@@ -58,8 +68,10 @@ class TournamentSummary {
       maxParticipants: json['maxParticipants'],
       participantCount: json['participantCount'] ?? 0,
       completed: json['status'] == 'COMPLETED',
+      inProgress: json['status'] == 'IN_PROGRESS',
       organizer: PlayerSummary.fromJson(json['organizer']),
       myRole: TournamentRole.values.byName(((json['myStatus'] ?? 'NONE') as String).toLowerCase()),
+      slots: json['slots'],
     );
   }
 }
@@ -73,8 +85,10 @@ class TournamentParticipant {
   final ParticipantStatus status;
   final int? placement;
   final DateTime? requestedAt;
+  // Place in the draw once a tournament with a format has started
+  final int? slotNo;
 
-  TournamentParticipant({required this.id, required this.player, required this.status, this.placement, this.requestedAt});
+  TournamentParticipant({required this.id, required this.player, required this.status, this.placement, this.requestedAt, this.slotNo});
 
   factory TournamentParticipant.fromJson(Map<String, dynamic> json) {
     return TournamentParticipant(
@@ -83,6 +97,7 @@ class TournamentParticipant {
       status: ParticipantStatus.values.byName((json['status'] as String).toLowerCase()),
       placement: json['placement'],
       requestedAt: _parseDate(json['requestedAt']),
+      slotNo: json['slotNo'],
     );
   }
 }
@@ -92,8 +107,10 @@ class TournamentDetail {
   // Accepted players for everyone; the organizer also gets pending and rejected requests
   final List<TournamentParticipant> participants;
   final String? resultNotes;
+  // Stages, stats and progress; null for a simple tournament
+  final TournamentFormat? format;
 
-  TournamentDetail({required this.tournament, required this.participants, this.resultNotes});
+  TournamentDetail({required this.tournament, required this.participants, this.resultNotes, this.format});
 
   List<TournamentParticipant> get accepted => participants.where((p) => p.status == ParticipantStatus.accepted).toList();
   List<TournamentParticipant> get pending => participants.where((p) => p.status == ParticipantStatus.pending).toList();
@@ -104,6 +121,7 @@ class TournamentDetail {
       tournament: TournamentSummary.fromJson(json['tournament']),
       participants: participants.map((e) => TournamentParticipant.fromJson(e)).toList(),
       resultNotes: json['resultNotes'],
+      format: json['format'] == null ? null : TournamentFormat.fromJson(json['format']),
     );
   }
 }

@@ -21,6 +21,14 @@ public interface TournamentService {
 
     TournamentDetailResponse recordResult(String username, Long tournamentId, RecordResultRequest request);
 
+    // Tournaments with a format (stages and fixtures)
+    TournamentDetailResponse updateFormat(String username, Long tournamentId, TournamentFormatRequest request);
+    TournamentDetailResponse startTournament(String username, Long tournamentId, StartTournamentRequest request);
+    TournamentFixturesResponse getFixtures(String username, Long tournamentId);
+    TournamentFixturesResponse recordMatchResult(String username, Long tournamentId, Long matchId, MatchResultRequest request);
+    TournamentDetailResponse finishStage(String username, Long tournamentId, Long stageId, FinishStageRequest request);
+    TournamentLeaderboardResponse getLeaderboard(String username, Long tournamentId);
+
     List<TournamentChatResponse> getChats(String username);
     List<TournamentMessageResponse> getMessages(String username, Long tournamentId, Long afterId, Long beforeId);
     TournamentMessageResponse sendMessage(String username, Long tournamentId, String content);

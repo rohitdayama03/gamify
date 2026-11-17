@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 
 /**
  * A tournament as seen by the current player. {@code myStatus} is ORGANIZER, PENDING, ACCEPTED,
- * REJECTED, or NONE when they haven't asked to join.
+ * REJECTED, or NONE when they haven't asked to join. {@code slots} is set for a tournament with a format.
  */
 public record TournamentSummaryResponse(
         Long id,
@@ -20,7 +20,8 @@ public record TournamentSummaryResponse(
         TournamentStatus status,
         PlayerSummaryResponse organizer,
         MyStatus myStatus,
-        OffsetDateTime completedAt
+        OffsetDateTime completedAt,
+        Integer slots
 ) {
     public enum MyStatus { ORGANIZER, PENDING, ACCEPTED, REJECTED, NONE }
 }

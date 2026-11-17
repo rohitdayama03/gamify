@@ -189,6 +189,8 @@ class OpenProfileOnTap extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 0: a tournament player who has deleted their account
+    if (playerId == 0) return child;
     return Semantics(
       hint: 'Open $username\'s profile',
       child: InkWell(

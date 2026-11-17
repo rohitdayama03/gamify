@@ -73,6 +73,7 @@ class TournamentStatusChip extends StatelessWidget {
       TournamentRole.pending => ('PENDING', AppColors.secondary),
       TournamentRole.rejected => ('DECLINED', AppColors.error),
       TournamentRole.none when t.completed => ('FINISHED', AppColors.textSecondary),
+      TournamentRole.none when t.inProgress => ('LIVE', AppColors.secondary),
       TournamentRole.none when t.isFull => ('FULL', AppColors.textSecondary),
       TournamentRole.none when t.hasStarted => ('STARTED', AppColors.textSecondary),
       TournamentRole.none => ('OPEN', AppColors.secondary),

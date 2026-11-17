@@ -1,5 +1,6 @@
 package com.example.gamify.config;
 
+import com.example.gamify.entity.TournamentStatus;
 import com.example.gamify.media.UploadKind;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.ApplicationArguments;
@@ -25,6 +26,8 @@ public class EnumCheckConstraints implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         // AVATAR came after the table
         allow("pending_uploads", "kind", UploadKind.class);
+        // IN_PROGRESS came with tournament formats
+        allow("tournaments", "status", TournamentStatus.class);
     }
 
     private void allow(String table, String column, Class<? extends Enum<?>> type) {

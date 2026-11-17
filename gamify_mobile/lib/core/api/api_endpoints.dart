@@ -61,6 +61,12 @@ class ApiEndpoints {
   static String rejectTournamentRequest(int requestId) => '/tournaments/requests/$requestId/reject';
   static String tournamentResult(int tournamentId) => '/tournaments/$tournamentId/result';
   static String tournamentMessages(int tournamentId) => '/tournaments/$tournamentId/messages';
+  static String tournamentFormat(int tournamentId) => '/tournaments/$tournamentId/format';
+  static String startTournament(int tournamentId) => '/tournaments/$tournamentId/start';
+  static String tournamentFixtures(int tournamentId) => '/tournaments/$tournamentId/fixtures';
+  static String tournamentMatch(int tournamentId, int matchId) => '/tournaments/$tournamentId/matches/$matchId';
+  static String finishStage(int tournamentId, int stageId) => '/tournaments/$tournamentId/stages/$stageId/finish';
+  static String tournamentLeaderboard(int tournamentId) => '/tournaments/$tournamentId/leaderboard';
   static String playerTournaments(int playerId) => '/players/$playerId/tournaments';
 
   // Post Endpoints

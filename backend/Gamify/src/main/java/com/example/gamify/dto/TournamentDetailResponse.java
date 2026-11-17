@@ -4,10 +4,11 @@ import java.util.List;
 
 /**
  * {@code participants} holds accepted players for everyone; the organizer also gets pending and rejected
- * requests. Placed players come first, winner on top.
+ * requests. Placed players come first, winner on top. {@code format} is null for a simple tournament.
  */
 public record TournamentDetailResponse(
         TournamentSummaryResponse tournament,
         List<TournamentParticipantResponse> participants,
-        String resultNotes
+        String resultNotes,
+        TournamentFormatResponse format
 ) {}

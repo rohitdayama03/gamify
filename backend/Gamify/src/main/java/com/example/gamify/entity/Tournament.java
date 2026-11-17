@@ -7,7 +7,11 @@ import java.time.OffsetDateTime;
 
 /**
  * A competition for one game. Anyone can organize one; players request to join and the organizer
- * accepts or rejects them. Recording the result marks it COMPLETED.
+ * accepts or rejects them.
+ * <p>
+ * A simple tournament ({@code slots} null) is settled by recording placements. A tournament with a format
+ * ({@code slots} set, eFootball only) has stages and fixtures: the organizer starts it once all slots are
+ * filled, enters each match result, and finishes stage by stage.
  */
 @Entity
 @Table(name = "tournaments", indexes = {
@@ -50,6 +54,13 @@ public class Tournament {
     @Column(name = "status", nullable = false, length = 20)
     private TournamentStatus status;
 
+    // Players in a tournament with a format; null for a simple tournament
+    @Column(name = "slots")
+    private Integer slots;
+
+    @Column(name = "started_at")
+    private OffsetDateTime startedAt;
+
     // Free text the organizer adds with the result, e.g. the final score
     @Column(name = "result_notes", columnDefinition = "TEXT")
     private String resultNotes;
@@ -59,6 +70,10 @@ public class Tournament {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public boolean hasFormat() {
+        return slots != null;
+    }
 
     @PrePersist
     protected void onCreate() {

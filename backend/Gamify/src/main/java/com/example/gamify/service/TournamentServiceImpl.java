@@ -40,6 +40,7 @@ public class TournamentServiceImpl implements TournamentService {
     private final TournamentMessageRepository messageRepository;
     private final ConnectionMapper connectionMapper;
     private final ApplicationEventPublisher events;
+    private final TournamentFormatService formatService;
 
     @Override
     @Transactional(readOnly = true)
@@ -70,6 +71,9 @@ public class TournamentServiceImpl implements TournamentService {
                 .organizer(me)
                 .status(TournamentStatus.OPEN)
                 .build());
+        if (request.format() != null) {
+            formatService.saveFormat(tournament, request.format());
+        }
         return toDetail(tournament, me);
     }
 
@@ -102,7 +106,8 @@ public class TournamentServiceImpl implements TournamentService {
             throw new BadRequestException("You're organizing this tournament");
         }
         requireOpen(tournament);
-        if (!tournament.getStartsAt().isAfter(OffsetDateTime.now())) {
+        // A tournament with a format takes requests until the organizer starts it
+        if (!tournament.hasFormat() && !tournament.getStartsAt().isAfter(OffsetDateTime.now())) {
             throw new BadRequestException("Registration closed when the tournament started");
         }
         participantRepository.findByTournamentAndPlayer(tournament, me).ifPresent(existing -> {
@@ -203,6 +208,9 @@ public class TournamentServiceImpl implements TournamentService {
         Player me = findPlayer(username);
         Tournament tournament = findTournament(tournamentId);
         requireOrganizer(tournament, me);
+        if (tournament.hasFormat()) {
+            throw new BadRequestException("This tournament is settled match by match. Enter the results in its fixtures.");
+        }
 
         Map<Long, TournamentParticipant> accepted = participantRepository.findAllByTournament(tournament).stream()
                 .filter(p -> p.getStatus() == ParticipantStatus.ACCEPTED)
@@ -234,6 +242,65 @@ public class TournamentServiceImpl implements TournamentService {
                     PushNotification.CHANNEL_REQUESTS, tournament, "tournament_update");
         }
         return toDetail(tournament, me);
+    }
+
+    @Override
+    @Transactional
+    public TournamentDetailResponse updateFormat(String username, Long tournamentId, TournamentFormatRequest request) {
+        Player me = findPlayer(username);
+        Tournament tournament = findTournament(tournamentId);
+        requireOrganizer(tournament, me);
+        requireOpen(tournament);
+        if (participantRepository.countByTournamentAndStatus(tournament, ParticipantStatus.ACCEPTED) > 0) {
+            throw new BadRequestException("The format is locked once you've accepted a player");
+        }
+        formatService.saveFormat(tournament, request);
+        return toDetail(tournament, me);
+    }
+
+    @Override
+    @Transactional
+    public TournamentDetailResponse startTournament(String username, Long tournamentId, StartTournamentRequest request) {
+        Player me = findPlayer(username);
+        Tournament tournament = findTournament(tournamentId);
+        requireOrganizer(tournament, me);
+        formatService.start(tournament, request);
+        return toDetail(tournament, me);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TournamentFixturesResponse getFixtures(String username, Long tournamentId) {
+        Player me = findPlayer(username);
+        Tournament tournament = findFormatTournament(tournamentId);
+        return formatService.fixtures(tournament, isOrganizer(tournament, me));
+    }
+
+    @Override
+    @Transactional
+    public TournamentFixturesResponse recordMatchResult(String username, Long tournamentId, Long matchId, MatchResultRequest request) {
+        Player me = findPlayer(username);
+        Tournament tournament = findFormatTournament(tournamentId);
+        requireOrganizer(tournament, me);
+        formatService.recordMatch(tournament, matchId, request);
+        return formatService.fixtures(tournament, true);
+    }
+
+    @Override
+    @Transactional
+    public TournamentDetailResponse finishStage(String username, Long tournamentId, Long stageId, FinishStageRequest request) {
+        Player me = findPlayer(username);
+        Tournament tournament = findFormatTournament(tournamentId);
+        requireOrganizer(tournament, me);
+        formatService.finish(tournament, stageId, request);
+        return toDetail(tournament, me);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public TournamentLeaderboardResponse getLeaderboard(String username, Long tournamentId) {
+        findPlayer(username);
+        return formatService.leaderboard(findFormatTournament(tournamentId));
     }
 
     @Override
@@ -360,10 +427,23 @@ public class TournamentServiceImpl implements TournamentService {
         for (Tournament tournament : tournamentRepository.findAllByOrganizer(player)) {
             delete(tournament);
         }
-        participantRepository.deleteAllByPlayer(player);
+        for (TournamentParticipant participant : participantRepository.findAllByPlayer(player)) {
+            Tournament tournament = participant.getTournament();
+            boolean inFixtures = tournament.hasFormat() && tournament.getStatus() != TournamentStatus.OPEN
+                    && participant.getStatus() == ParticipantStatus.ACCEPTED;
+            if (inFixtures) {
+                // The fixtures point at this row, so keep it under the name they played as
+                participant.setFormerUsername(player.getUsername());
+                participant.setPlayer(null);
+            } else {
+                participantRepository.delete(participant);
+            }
+        }
+        participantRepository.flush();
     }
 
     private void delete(Tournament tournament) {
+        formatService.deleteFormat(tournament);
         messageRepository.deleteAllByTournament(tournament);
         participantRepository.deleteAllByTournament(tournament);
         tournamentRepository.delete(tournament);
@@ -397,7 +477,8 @@ public class TournamentServiceImpl implements TournamentService {
                 t.getStatus(),
                 connectionMapper.toPlayerSummary(t.getOrganizer()),
                 myStatus,
-                t.getCompletedAt()
+                t.getCompletedAt(),
+                t.getSlots()
         );
     }
 
@@ -406,7 +487,7 @@ public class TournamentServiceImpl implements TournamentService {
         List<TournamentParticipant> all = participantRepository.findAllByTournament(tournament);
         long accepted = all.stream().filter(p -> p.getStatus() == ParticipantStatus.ACCEPTED).count();
         ParticipantStatus myRequest = all.stream()
-                .filter(p -> p.getPlayer().getPlayerId().equals(me.getPlayerId()))
+                .filter(p -> p.getPlayer() != null && p.getPlayer().getPlayerId().equals(me.getPlayerId()))
                 .map(TournamentParticipant::getStatus)
                 .findFirst().orElse(null);
         return new TournamentDetailResponse(
@@ -416,12 +497,14 @@ public class TournamentServiceImpl implements TournamentService {
                         .filter(p -> organizer || p.getStatus() == ParticipantStatus.ACCEPTED)
                         .map(p -> new TournamentParticipantResponse(
                                 p.getId(),
-                                connectionMapper.toPlayerSummary(p.getPlayer()),
+                                formatService.summary(p),
                                 p.getStatus(),
                                 p.getPlacement(),
-                                p.getCreatedAt()))
+                                p.getCreatedAt(),
+                                p.getSlotNo()))
                         .toList(),
-                tournament.getResultNotes()
+                tournament.getResultNotes(),
+                tournament.hasFormat() ? formatService.toResponse(tournament, accepted) : null
         );
     }
 
@@ -456,6 +539,9 @@ public class TournamentServiceImpl implements TournamentService {
     }
 
     private static void requireOpen(Tournament tournament) {
+        if (tournament.getStatus() == TournamentStatus.IN_PROGRESS) {
+            throw new BadRequestException("This tournament has already started");
+        }
         if (tournament.getStatus() != TournamentStatus.OPEN) {
             throw new BadRequestException("This tournament is over");
         }
@@ -496,6 +582,14 @@ public class TournamentServiceImpl implements TournamentService {
 
     private static String preview(String content) {
         return content.length() <= PREVIEW_LENGTH ? content : content.substring(0, PREVIEW_LENGTH) + "…";
+    }
+
+    private Tournament findFormatTournament(Long tournamentId) {
+        Tournament tournament = findTournament(tournamentId);
+        if (!tournament.hasFormat()) {
+            throw new BadRequestException("This tournament has no stages or fixtures");
+        }
+        return tournament;
     }
 
     private Tournament findTournament(Long tournamentId) {

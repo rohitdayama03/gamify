@@ -3,12 +3,15 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/utils/time_format.dart';
 import '../../models/game.dart';
+import '../../models/tournament_format_model.dart';
 import '../../providers/tournament_provider.dart';
 import '../../widgets/game_logo.dart';
 import '../../widgets/primary_button.dart';
+import 'format_builder_screen.dart';
 import 'tournament_detail_screen.dart';
 
-/// Set up a tournament: game, name, start time, optional player limit and description.
+/// Set up a tournament: game, name, start time and description. An eFootball tournament also gets a format
+/// (players, stages, stats) designed in [FormatBuilderScreen]; other games take an optional player limit.
 /// Opens the new tournament's page once it's created.
 class CreateTournamentScreen extends StatefulWidget {
   final Game? initialGame;
@@ -25,6 +28,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
   final _maxController = TextEditingController();
   late Game _game = widget.initialGame ?? Game.values.first;
   DateTime? _startsAt;
+  FormatDraft _format = FormatDraft.initial();
   bool _creating = false;
   String? _error;
 
@@ -55,8 +59,22 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
     return null;
   }
 
+  // Stages and fixtures are eFootball only for now
+  bool get _usesFormat => _game == Game.efootball;
+
   bool get _canCreate =>
-      _name.length >= 3 && _startsAt != null && _startsAt!.isAfter(DateTime.now()) && _maxProblem == null;
+      _name.length >= 3 &&
+      _startsAt != null &&
+      _startsAt!.isAfter(DateTime.now()) &&
+      (_usesFormat ? _format.problem == null : _maxProblem == null);
+
+  Future<void> _editFormat() async {
+    final draft = await Navigator.push<FormatDraft>(
+      context,
+      MaterialPageRoute(builder: (_) => FormatBuilderScreen(initial: _format)),
+    );
+    if (draft != null && mounted) setState(() => _format = draft);
+  }
 
   Future<void> _pickStart() async {
     final now = DateTime.now();
@@ -86,7 +104,8 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
       game: _game,
       description: description.isEmpty ? null : description,
       startsAt: _startsAt!,
-      maxParticipants: _max,
+      maxParticipants: _usesFormat ? null : _max,
+      format: _usesFormat ? _format : null,
     );
     if (!mounted) return;
     setState(() => _creating = false);
@@ -140,7 +159,7 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
                 labelText: 'Starts',
                 prefixIcon: const Icon(Icons.event_outlined),
                 errorText: startInPast ? 'Pick a time in the future' : null,
-                helperText: 'Requests close when it starts',
+                helperText: _usesFormat ? 'Requests stay open until you start the tournament' : 'Requests close when it starts',
               ),
               child: Text(
                 startsAt == null ? 'Pick date and time' : formatDateTime(startsAt),
@@ -149,16 +168,21 @@ class _CreateTournamentScreenState extends State<CreateTournamentScreen> {
             ),
           ),
           const SizedBox(height: AppSpacing.md),
-          TextField(
-            controller: _maxController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Max players (optional)',
-              helperText: 'Leave empty for no limit',
-              errorText: _maxProblem,
-              prefixIcon: const Icon(Icons.groups_outlined),
+          if (_usesFormat) ...[
+            const Text('FORMAT', style: _labelStyle),
+            const SizedBox(height: AppSpacing.xs),
+            FormatSummaryCard(draft: _format, onEdit: _editFormat),
+          ] else
+            TextField(
+              controller: _maxController,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'Max players (optional)',
+                helperText: 'Leave empty for no limit',
+                errorText: _maxProblem,
+                prefixIcon: const Icon(Icons.groups_outlined),
+              ),
             ),
-          ),
           const SizedBox(height: AppSpacing.md),
           TextField(
             controller: _descriptionController,

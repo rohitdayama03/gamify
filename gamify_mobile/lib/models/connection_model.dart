@@ -18,7 +18,8 @@ class PlayerSummary {
 
   factory PlayerSummary.fromJson(Map<String, dynamic> json) {
     return PlayerSummary(
-      playerId: json['playerId'],
+      // Null for a tournament player who has since deleted their account
+      playerId: json['playerId'] ?? 0,
       username: json['username'],
       avatarUrl: json['avatarUrl'],
       playerBio: json['playerBio'],

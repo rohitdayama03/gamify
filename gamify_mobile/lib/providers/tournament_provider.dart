@@ -5,6 +5,7 @@ import '../core/api/api_endpoints.dart';
 import '../core/api/api_error.dart';
 import '../models/chat_model.dart';
 import '../models/game.dart';
+import '../models/tournament_format_model.dart';
 import '../models/tournament_model.dart';
 
 class TournamentProvider extends ChangeNotifier {
@@ -69,6 +70,7 @@ class TournamentProvider extends ChangeNotifier {
     String? description,
     required DateTime startsAt,
     int? maxParticipants,
+    FormatDraft? format,
   }) =>
       _detailRequest(
         () => _apiClient.dio.post(ApiEndpoints.tournaments, data: {
@@ -78,9 +80,90 @@ class TournamentProvider extends ChangeNotifier {
           // UTC with an offset, which the backend's OffsetDateTime expects
           'startsAt': startsAt.toUtc().toIso8601String(),
           'maxParticipants': maxParticipants,
+          if (format != null) 'format': format.toJson(),
         }),
         'Could not create the tournament',
       );
+
+  /// Organizer only, until a player has been accepted.
+  Future<TournamentDetail?> updateFormat(int id, FormatDraft format) => _detailRequest(
+        () => _apiClient.dio.put(ApiEndpoints.tournamentFormat(id), data: format.toJson()),
+        'Could not save the format',
+        refreshAfter: false,
+      );
+
+  /// Organizer only, once every slot is filled. [order] (participant ids, slot 1 first) for manual seeding;
+  /// null shuffles the players.
+  Future<TournamentDetail?> startTournament(int id, {List<int>? order}) => _detailRequest(
+        () => _apiClient.dio.post(ApiEndpoints.startTournament(id), data: {
+          'seeding': order == null ? 'RANDOM' : 'MANUAL',
+          'order': order,
+        }),
+        'Could not start the tournament',
+      );
+
+  /// Organizer only, once every result in the stage is in. [groupOrders] maps a group to its participant ids
+  /// in finishing order, for groups whose level players the organizer has put in order.
+  Future<TournamentDetail?> finishStage(int id, int stageId, {Map<int, List<int>>? groupOrders}) => _detailRequest(
+        () => _apiClient.dio.post(ApiEndpoints.finishStage(id, stageId), data: {
+          'groupOrders': [
+            for (final entry in (groupOrders ?? const <int, List<int>>{}).entries)
+              {'groupNo': entry.key, 'participantIds': entry.value},
+          ],
+        }),
+        'Could not finish the stage',
+      );
+
+  Future<TournamentFixtures?> fetchFixtures(int id) async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.tournamentFixtures(id));
+      _errorMessage = null;
+      return TournamentFixtures.fromJson(response.data);
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, 'Failed to load the fixtures');
+      return null;
+    }
+  }
+
+  /// Organizer only. [stats] maps a stat id to its (home, away) values; null values aren't recorded.
+  /// Answers with the updated fixtures.
+  Future<TournamentFixtures?> recordMatch(
+    int id,
+    int matchId, {
+    required int homeScore,
+    required int awayScore,
+    int? homePens,
+    int? awayPens,
+    Map<int, (double?, double?)> stats = const {},
+  }) async {
+    try {
+      final response = await _apiClient.dio.put(ApiEndpoints.tournamentMatch(id, matchId), data: {
+        'homeScore': homeScore,
+        'awayScore': awayScore,
+        'homePens': homePens,
+        'awayPens': awayPens,
+        'stats': [
+          for (final entry in stats.entries) {'statId': entry.key, 'home': entry.value.$1, 'away': entry.value.$2},
+        ],
+      });
+      _errorMessage = null;
+      return TournamentFixtures.fromJson(response.data);
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, 'Could not save the result');
+      return null;
+    }
+  }
+
+  Future<TournamentLeaderboard?> fetchLeaderboard(int id) async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.tournamentLeaderboard(id));
+      _errorMessage = null;
+      return TournamentLeaderboard.fromJson(response.data);
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, 'Failed to load the standings');
+      return null;
+    }
+  }
 
   Future<TournamentDetail?> fetchTournament(int id) =>
       _detailRequest(() => _apiClient.dio.get(ApiEndpoints.tournament(id)), 'Failed to load the tournament', refreshAfter: false);

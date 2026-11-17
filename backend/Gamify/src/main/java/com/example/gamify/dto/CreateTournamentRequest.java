@@ -1,11 +1,15 @@
 package com.example.gamify.dto;
 
 import com.example.gamify.entity.Game;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 
 import java.time.OffsetDateTime;
 
-/** {@code maxParticipants} is optional; null means no limit. */
+/**
+ * {@code maxParticipants} is optional; null means no limit. {@code format} (eFootball only) turns it into a
+ * tournament with stages and fixtures; its player count then replaces {@code maxParticipants}.
+ */
 public record CreateTournamentRequest(
         @NotBlank(message = "Tournament name is required")
         @Size(min = 3, max = 60, message = "Tournament name must be 3 to 60 characters")
@@ -17,5 +21,6 @@ public record CreateTournamentRequest(
         OffsetDateTime startsAt,
         @Min(value = 2, message = "Allow at least 2 participants")
         @Max(value = 1000, message = "At most 1000 participants")
-        Integer maxParticipants
+        Integer maxParticipants,
+        @Valid TournamentFormatRequest format
 ) {}

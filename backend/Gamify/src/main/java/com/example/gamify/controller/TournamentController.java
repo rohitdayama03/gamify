@@ -102,6 +102,58 @@ public class TournamentController {
         return ResponseEntity.ok(tournamentService.recordResult(currentUsername, tournamentId, request));
     }
 
+    // Organizer replaces the stages, stats and fixtures; only until a player has been accepted
+    @PutMapping("/tournaments/{tournamentId}/format")
+    public ResponseEntity<TournamentDetailResponse> updateFormat(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @Valid @RequestBody TournamentFormatRequest request) {
+        return ResponseEntity.ok(tournamentService.updateFormat(currentUsername, tournamentId, request));
+    }
+
+    // Organizer draws the players into slots and locks the fixtures; every slot must be filled
+    @PostMapping("/tournaments/{tournamentId}/start")
+    public ResponseEntity<TournamentDetailResponse> startTournament(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @Valid @RequestBody StartTournamentRequest request) {
+        return ResponseEntity.ok(tournamentService.startTournament(currentUsername, tournamentId, request));
+    }
+
+    @GetMapping("/tournaments/{tournamentId}/fixtures")
+    public ResponseEntity<TournamentFixturesResponse> getFixtures(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId) {
+        return ResponseEntity.ok(tournamentService.getFixtures(currentUsername, tournamentId));
+    }
+
+    // Organizer enters (or corrects) a match result in the current stage
+    @PutMapping("/tournaments/{tournamentId}/matches/{matchId}")
+    public ResponseEntity<TournamentFixturesResponse> recordMatchResult(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @PathVariable Long matchId,
+            @Valid @RequestBody MatchResultRequest request) {
+        return ResponseEntity.ok(tournamentService.recordMatchResult(currentUsername, tournamentId, matchId, request));
+    }
+
+    // Organizer closes the current stage once every result is in; the last stage completes the tournament
+    @PostMapping("/tournaments/{tournamentId}/stages/{stageId}/finish")
+    public ResponseEntity<TournamentDetailResponse> finishStage(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @PathVariable Long stageId,
+            @Valid @RequestBody(required = false) FinishStageRequest request) {
+        return ResponseEntity.ok(tournamentService.finishStage(currentUsername, tournamentId, stageId, request));
+    }
+
+    @GetMapping("/tournaments/{tournamentId}/leaderboard")
+    public ResponseEntity<TournamentLeaderboardResponse> getLeaderboard(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId) {
+        return ResponseEntity.ok(tournamentService.getLeaderboard(currentUsername, tournamentId));
+    }
+
     // Announcement chats the player is in, for the Inbox
     @GetMapping("/tournaments/chats")
     public ResponseEntity<List<TournamentChatResponse>> getChats(@AuthenticationPrincipal String currentUsername) {
