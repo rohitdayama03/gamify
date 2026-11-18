@@ -42,6 +42,24 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- Shared tournament links: the link page opens gamify://tournament/<id> (TournamentLinks) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="gamify" android:host="tournament"/>
+            </intent-filter>
+            <!-- The shared web link itself (https://gamify-api.duckdns.org/t/42). Opens straight in the app
+                 once the server's /.well-known/assetlinks.json lists this app; until then it opens the
+                 link page, which hands over to the app. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data android:scheme="https" android:host="gamify-api.duckdns.org" android:pathPrefix="/t/"/>
+            </intent-filter>
+            <!-- app_links handles incoming links; stop Flutter also pushing them as routes -->
+            <meta-data android:name="flutter_deeplinking_enabled" android:value="false"/>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

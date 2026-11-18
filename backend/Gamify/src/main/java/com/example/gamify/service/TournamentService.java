@@ -3,12 +3,15 @@ package com.example.gamify.service;
 import com.example.gamify.dto.*;
 import com.example.gamify.entity.Game;
 import com.example.gamify.entity.Player;
+import com.example.gamify.entity.TournamentStatus;
 
 import java.util.List;
 
 public interface TournamentService {
     List<TournamentSummaryResponse> getOpenTournaments(String username, Game game);
     List<TournamentSummaryResponse> getMyTournaments(String username);
+    List<TournamentSummaryResponse> searchTournaments(String username, String text, Game game, TournamentStatus status,
+                                                      TournamentSearchSort sort, int page, int size);
     TournamentDetailResponse createTournament(String username, CreateTournamentRequest request);
     TournamentDetailResponse getTournament(String username, Long tournamentId);
     void deleteTournament(String username, Long tournamentId);

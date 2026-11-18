@@ -53,6 +53,7 @@ class ApiEndpoints {
   // Tournament Endpoints
   static const String tournaments = '/tournaments';
   static const String myTournaments = '/tournaments/mine';
+  static const String searchTournaments = '/tournaments/search';
   static const String tournamentRequests = '/tournaments/requests';
   static const String tournamentChats = '/tournaments/chats';
   static String tournament(int tournamentId) => '/tournaments/$tournamentId';

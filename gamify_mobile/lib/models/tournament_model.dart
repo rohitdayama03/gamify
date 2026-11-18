@@ -228,3 +228,28 @@ class PlayerTournament {
     );
   }
 }
+
+/// How tournament search results are ordered; [apiValue] is the backend's TournamentSearchSort.
+enum TournamentSearchSort {
+  relevance('RELEVANCE', 'Relevance'),
+  earliest('STARTS_EARLIEST', 'Earliest start'),
+  latest('STARTS_LATEST', 'Latest start');
+
+  final String apiValue;
+  final String label;
+
+  const TournamentSearchSort(this.apiValue, this.label);
+}
+
+/// Which tournaments a search covers; [apiValue] is the backend's TournamentStatus, null for all of them.
+enum TournamentStatusFilter {
+  any(null, 'Any status'),
+  open('OPEN', 'Open'),
+  live('IN_PROGRESS', 'Live'),
+  finished('COMPLETED', 'Finished');
+
+  final String? apiValue;
+  final String label;
+
+  const TournamentStatusFilter(this.apiValue, this.label);
+}

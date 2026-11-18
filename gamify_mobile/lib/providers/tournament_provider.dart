@@ -50,6 +50,28 @@ class TournamentProvider extends ChangeNotifier {
   Future<List<TournamentSummary>?> fetchOpen({Game? game}) =>
       _listRequest(() => _apiClient.dio.get(ApiEndpoints.tournaments, queryParameters: {'game': ?game?.apiValue}));
 
+  /// Shortest search text the backend searches on (TournamentController.MIN_SEARCH_LENGTH).
+  static const int minSearchLength = 2;
+
+  /// Tournaments whose name contains [query] or whose organizer's username starts with it, [pageSize] at a
+  /// time. Returns null on failure.
+  Future<List<TournamentSummary>?> searchTournaments({
+    required String query,
+    Game? game,
+    TournamentStatusFilter status = TournamentStatusFilter.any,
+    TournamentSearchSort sort = TournamentSearchSort.relevance,
+    int page = 0,
+    int pageSize = 20,
+  }) =>
+      _listRequest(() => _apiClient.dio.get(ApiEndpoints.searchTournaments, queryParameters: {
+            'q': query,
+            'game': ?game?.apiValue,
+            'status': ?status.apiValue,
+            'sort': sort.apiValue,
+            'page': page,
+            'size': pageSize,
+          }));
+
   /// Tournaments the player organizes or has asked to join. Returns null on failure.
   Future<List<TournamentSummary>?> fetchMine() => _listRequest(() => _apiClient.dio.get(ApiEndpoints.myTournaments));
 

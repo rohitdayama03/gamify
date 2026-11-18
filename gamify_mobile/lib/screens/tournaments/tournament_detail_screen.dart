@@ -15,6 +15,7 @@ import 'fixtures_view.dart';
 import 'format_builder_screen.dart';
 import 'match_result_sheet.dart';
 import 'record_result_screen.dart';
+import 'share_tournament_sheet.dart';
 import 'standings_view.dart';
 import 'start_tournament_sheet.dart';
 import 'tournament_card.dart';
@@ -282,6 +283,12 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
                 tabs: const [Tab(text: 'Overview'), Tab(text: 'Fixtures'), Tab(text: 'Standings'), Tab(text: 'Leaderboard')],
               ),
         actions: [
+          if (t != null)
+            IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Share tournament',
+              onPressed: () => ShareTournamentSheet.show(context, t),
+            ),
           if (t != null && t.myRole == TournamentRole.organizer)
             PopupMenuButton<String>(
               onSelected: (_) => _cancelTournament(t),

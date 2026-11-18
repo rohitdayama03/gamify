@@ -2,6 +2,7 @@ package com.example.gamify.controller;
 
 import com.example.gamify.dto.*;
 import com.example.gamify.entity.Game;
+import com.example.gamify.entity.TournamentStatus;
 import com.example.gamify.service.TournamentService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TournamentController {
 
+    // Shorter search text matches too much to be useful
+    public static final int MIN_SEARCH_LENGTH = 2;
+
     private final TournamentService tournamentService;
 
     // Open tournaments, soonest first; filter by game with ?game=BGMI
@@ -25,6 +29,24 @@ public class TournamentController {
             @AuthenticationPrincipal String currentUsername,
             @RequestParam(required = false) Game game) {
         return ResponseEntity.ok(tournamentService.getOpenTournaments(currentUsername, game));
+    }
+
+    // Tournaments whose name contains the text or whose organizer's username starts with it, any status unless
+    // ?status= is given. Text under 2 characters is too broad and returns nothing.
+    @GetMapping("/tournaments/search")
+    public ResponseEntity<List<TournamentSummaryResponse>> searchTournaments(
+            @AuthenticationPrincipal String currentUsername,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Game game,
+            @RequestParam(required = false) TournamentStatus status,
+            @RequestParam(defaultValue = "RELEVANCE") TournamentSearchSort sort,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        if (q == null || q.trim().length() < MIN_SEARCH_LENGTH) {
+            return ResponseEntity.ok(List.of());
+        }
+        return ResponseEntity.ok(tournamentService.searchTournaments(
+                currentUsername, q, game, status, sort, Math.max(page, 0), Math.min(Math.max(size, 1), 50)));
     }
 
     // Tournaments the player organizes or has asked to join

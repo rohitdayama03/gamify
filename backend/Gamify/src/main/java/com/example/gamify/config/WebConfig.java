@@ -43,6 +43,8 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addViewController("/privacy-policy").setViewName("forward:/privacy-policy.html");
         registry.addViewController("/delete-account").setViewName("forward:/delete-account.html");
         registry.addViewController("/child-safety").setViewName("forward:/child-safety.html");
+        // Shared tournament links (/t/42) open the tournament in the app, or the Play Store
+        registry.addViewController("/t/{tournamentId}").setViewName("forward:/tournament-link.html");
     }
 
     // Allows the Flutter web build to call the API; locally it's served from a random localhost port

@@ -10,6 +10,7 @@ import '../../providers/squad_provider.dart';
 import '../../providers/tournament_provider.dart';
 import '../squads/squad_info_screen.dart';
 import '../tournaments/tournament_detail_screen.dart';
+import '../../widgets/linked_text.dart';
 import '../../widgets/player_avatar.dart';
 
 enum _ChatKind { friend, squad, tournament }
@@ -453,7 +454,12 @@ class _MessageBubble extends StatelessWidget {
                   ),
                 ),
               ),
-            SelectableText(message.content, style: TextStyle(color: textColor, fontSize: 15)),
+            LinkedText(
+              message.content,
+              style: TextStyle(color: textColor, fontSize: 15),
+              // Dark links on the mint bubble, mint links on the dark one
+              linkColor: mine ? AppColors.onPrimary : AppColors.primary,
+            ),
             const SizedBox(height: 2),
             Text(time, style: TextStyle(color: textColor.withValues(alpha: 0.7), fontSize: 11)),
           ],

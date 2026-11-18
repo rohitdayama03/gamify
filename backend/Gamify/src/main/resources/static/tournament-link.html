@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gamify Tournament</title>
+    <meta name="description" content="You've been invited to a tournament on Gamify. Open it in the app to see the details and ask to join.">
+    <meta property="og:title" content="Join this tournament on Gamify">
+    <meta property="og:description" content="Open it in the Gamify app to see the details and ask to join.">
+    <meta property="og:type" content="website">
+    <link rel="icon" type="image/png" href="../images/icon-192.png">
+    <!--
+        Shared tournament links (/t/42) land here when Android doesn't open them in the app directly, which
+        it does once /.well-known/assetlinks.json lists the app (AppLinksController). On Android it hands
+        the tournament to the app with an intent link; Chrome follows the fallback to the Play Store when
+        the app isn't installed.
+    -->
+    <style>
+        :root { --bg: #0b0f0e; --fg: #e6edea; --muted: #9aa8a2; --accent: #3ddc97; --on-accent: #06231a; --line: #1f2a26; --card: #121917; }
+        * { box-sizing: border-box; }
+        body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+               background: var(--bg); color: var(--fg);
+               font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        main { width: 100%; max-width: 420px; padding: 32px 16px; text-align: center; }
+        img { width: 72px; height: 72px; border-radius: 18px; }
+        h1 { font-size: 1.5rem; margin: 16px 0 4px; }
+        p { margin: 0 0 24px; color: var(--muted); }
+        .btn { display: block; padding: 14px 16px; border-radius: 12px; font-weight: 600; text-decoration: none; margin-top: 12px; }
+        .primary { background: var(--accent); color: var(--on-accent); }
+        .secondary { border: 1px solid var(--line); background: var(--card); color: var(--fg); }
+        [hidden] { display: none; }
+    </style>
+</head>
+<body>
+<main>
+    <img src="../images/icon-192.png" alt="">
+    <h1 id="title">Opening the tournament…</h1>
+    <p id="message">If Gamify doesn't open, tap the button below.</p>
+    <a id="open" class="btn primary" href="#">Open in Gamify</a>
+    <a id="store" class="btn secondary" href="https://play.google.com/store/apps/details?id=io.gamifyapp.android">Get Gamify on Google Play</a>
+</main>
+<script>
+    (function () {
+        var appId = 'io.gamifyapp.android';
+        // /t/42, or /t?id=42
+        var match = location.pathname.match(/\/t\/([^/]+)\/?$/);
+        var id = match ? match[1] : new URLSearchParams(location.search).get('id');
+        var valid = id !== null && /^[0-9]{1,18}$/.test(id);
+        var store = 'https://play.google.com/store/apps/details?id=' + appId;
+        var android = /Android/i.test(navigator.userAgent);
+        var open = document.getElementById('open');
+
+        if (!valid) {
+            document.getElementById('title').textContent = 'This link is incomplete';
+            document.getElementById('message').textContent = 'Ask whoever shared it to send the tournament link again.';
+            open.hidden = true;
+            return;
+        }
+        if (!android) {
+            document.getElementById('title').textContent = 'Join this tournament on Gamify';
+            document.getElementById('message').textContent = 'Gamify is on Android. Install it, then open this link on your phone to see the tournament.';
+            open.hidden = true;
+            return;
+        }
+        // Opens gamify://tournament/<id> in the app, or the Play Store when the app isn't installed
+        var intent = 'intent://tournament/' + id + '#Intent;scheme=gamify;package=' + appId +
+            ';S.browser_fallback_url=' + encodeURIComponent(store) + ';end';
+        open.href = intent;
+        location.replace(intent);
+    })();
+</script>
+</body>
+</html>

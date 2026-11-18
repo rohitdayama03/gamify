@@ -3,13 +3,15 @@ import '../../core/constants/app_colors.dart';
 import '../../models/connection_model.dart';
 import '../../widgets/player_avatar.dart';
 
-/// Checklist of friends with a username filter, for choosing who to invite to a squad.
+/// Checklist of friends with a username filter, e.g. for choosing who to invite to a squad.
 /// Players in [unavailable] (already in the squad or invited) are listed but can't be picked.
 class FriendPicker extends StatefulWidget {
   final List<PlayerSummary> friends;
   final Set<int> selected;
   final Map<int, String> unavailable;
   final ValueChanged<Set<int>> onChanged;
+  // Shown when there are no friends to pick
+  final String emptyMessage;
 
   const FriendPicker({
     super.key,
@@ -17,6 +19,7 @@ class FriendPicker extends StatefulWidget {
     required this.selected,
     required this.onChanged,
     this.unavailable = const {},
+    this.emptyMessage = 'Add friends from Discover first. Only friends can be invited to a squad.',
   });
 
   @override
@@ -41,12 +44,12 @@ class _FriendPickerState extends State<FriendPicker> {
   @override
   Widget build(BuildContext context) {
     if (widget.friends.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.all(32),
+      return Padding(
+        padding: const EdgeInsets.all(32),
         child: Text(
-          'Add friends from Discover first. Only friends can be invited to a squad.',
+          widget.emptyMessage,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.textSecondary),
+          style: const TextStyle(color: AppColors.textSecondary),
         ),
       );
     }

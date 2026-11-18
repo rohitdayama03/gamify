@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../../core/constants/app_colors.dart';
+import '../../core/links/tournament_links.dart';
 import '../../core/notifications/push_notifications.dart';
 import '../../models/game.dart';
 import '../../providers/chat_provider.dart';
@@ -49,10 +50,13 @@ class _MainScreenState extends State<MainScreen> {
     PushNotifications.instance.start(onActivity: () {
       if (mounted) _refresh();
     });
+    // A tournament link tapped before signing in opens now
+    TournamentLinks.instance.attach();
   }
 
   @override
   void dispose() {
+    TournamentLinks.instance.detach();
     _refreshTimer?.cancel();
     super.dispose();
   }

@@ -14,6 +14,7 @@ import com.example.gamify.repository.TournamentRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,6 +49,31 @@ public class TournamentServiceImpl implements TournamentService {
         Player me = findPlayer(username);
         PageRequest page = PageRequest.of(0, OPEN_LIST_SIZE);
         return toSummaries(game == null ? tournamentRepository.findOpen(page) : tournamentRepository.findOpenByGame(game, page), me);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<TournamentSummaryResponse> searchTournaments(String username, String text, Game game, TournamentStatus status,
+                                                             TournamentSearchSort sort, int page, int size) {
+        Player me = findPlayer(username);
+        String exact = text.trim().toLowerCase(Locale.ROOT);
+        String escaped = escapeLike(exact);
+        String prefix = escaped + "%";
+        String contains = "%" + escaped + "%";
+        List<Tournament> found = switch (sort) {
+            case RELEVANCE -> tournamentRepository.searchByRelevance(
+                    exact, prefix, contains, "% " + prefix, game, status, PageRequest.of(page, size));
+            case STARTS_EARLIEST -> tournamentRepository.search(
+                    prefix, contains, game, status, PageRequest.of(page, size, Sort.by("startsAt").ascending().and(Sort.by("id"))));
+            case STARTS_LATEST -> tournamentRepository.search(
+                    prefix, contains, game, status, PageRequest.of(page, size, Sort.by("startsAt").descending().and(Sort.by("id").descending())));
+        };
+        return toSummaries(found, me);
+    }
+
+    // Treat % and _ typed by the player as literal characters
+    private static String escapeLike(String value) {
+        return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_");
     }
 
     @Override

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:material_ui/material_ui.dart' as material_ui;
 import 'package:provider/provider.dart';
 
+import 'core/links/tournament_links.dart';
 import 'core/notifications/push_notifications.dart';
 import 'core/theme/app_theme.dart';
 import 'providers/auth_provider.dart';
@@ -17,6 +18,8 @@ import 'screens/start_screen.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await PushNotifications.instance.init();
+  // Shared tournament links open the tournament, including the link that launched the app
+  TournamentLinks.instance.init();
   runApp(const GamifyApp());
 }
 
