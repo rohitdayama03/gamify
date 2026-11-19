@@ -29,12 +29,13 @@ public class WebConfig implements WebMvcConfigurer {
         resolvers.add(currentUsernameArgumentResolver);
     }
 
-    // Every API needs a login token except the ones used to get one
+    // Every API needs a login token except the ones used to get one, and the version check the app runs first
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/api/**")
-                .excludePathPatterns("/api/v1/auth/otp", "/api/v1/auth/register", "/api/v1/auth/login");
+                .excludePathPatterns("/api/v1/auth/otp", "/api/v1/auth/register", "/api/v1/auth/login",
+                        "/api/v1/app/version");
     }
 
     // Public privacy policy, account deletion and child safety pages for the store listings; the files are in resources/static

@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'core/links/tournament_links.dart';
 import 'core/notifications/push_notifications.dart';
 import 'core/theme/app_theme.dart';
+import 'core/updates/update_gate.dart';
 import 'providers/auth_provider.dart';
 import 'providers/chat_provider.dart';
 import 'providers/connection_provider.dart';
@@ -48,6 +49,8 @@ class GamifyApp extends StatelessWidget {
         localizationsDelegates: material_ui.GlobalMaterialLocalizations.delegates,
         // Lets a tapped notification open the right screen
         navigatorKey: PushNotifications.navigatorKey,
+        // Offers Play updates, and blocks the app when this version is below the server's minimum
+        builder: (context, child) => UpdateGate(child: child!),
         home: const StartScreen(),
       ),
     );

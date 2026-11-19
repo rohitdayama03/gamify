@@ -1,4 +1,7 @@
 class ApiEndpoints {
+  // Oldest app version still allowed (no login needed)
+  static const String appVersion = '/app/version';
+
   // Auth Endpoints
   static const String sendOtp = '/auth/otp';
   static const String register = '/auth/register';
