@@ -28,6 +28,9 @@ class TournamentSummary {
   final bool inProgress;
   final PlayerSummary organizer;
   final TournamentRole myRole;
+  // True when the user has a place as a player. An organizer who entered their own tournament keeps the
+  // organizer role and has this set.
+  final bool amPlaying;
   // Players in a tournament with stages and fixtures; null for a simple tournament
   final int? slots;
 
@@ -43,6 +46,7 @@ class TournamentSummary {
     this.inProgress = false,
     required this.organizer,
     required this.myRole,
+    this.amPlaying = false,
     this.slots,
   });
 
@@ -51,8 +55,10 @@ class TournamentSummary {
   bool get isFull => maxParticipants != null && participantCount >= maxParticipants!;
   // A tournament with a format starts when the organizer starts it; a simple one at its start time
   bool get hasStarted => hasFormat ? !isOpen : !startsAt.isAfter(DateTime.now());
+  bool get isOrganizer => myRole == TournamentRole.organizer;
+  bool get isPlaying => myRole == TournamentRole.accepted || amPlaying;
   // The organizer and accepted players share the announcements chat
-  bool get canOpenChat => myRole == TournamentRole.organizer || myRole == TournamentRole.accepted;
+  bool get canOpenChat => isOrganizer || isPlaying;
 
   String get slotsLabel => maxParticipants == null
       ? '$participantCount joined'
@@ -70,10 +76,17 @@ class TournamentSummary {
       completed: json['status'] == 'COMPLETED',
       inProgress: json['status'] == 'IN_PROGRESS',
       organizer: PlayerSummary.fromJson(json['organizer']),
-      myRole: TournamentRole.values.byName(((json['myStatus'] ?? 'NONE') as String).toLowerCase()),
+      myRole: _parseRole(json['myStatus']),
+      amPlaying: json['amPlaying'] == true,
       slots: json['slots'],
     );
   }
+}
+
+// A status this version doesn't know (added in a later backend) reads as none instead of failing the whole list
+TournamentRole _parseRole(dynamic value) {
+  final name = (value is String ? value : 'NONE').toLowerCase();
+  return TournamentRole.values.asNameMap()[name] ?? TournamentRole.none;
 }
 
 enum ParticipantStatus { pending, accepted, rejected }

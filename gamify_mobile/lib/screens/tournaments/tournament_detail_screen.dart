@@ -200,12 +200,14 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
   }
 
   Future<void> _withdraw(TournamentSummary t) async {
-    final leaving = t.myRole == TournamentRole.accepted;
+    final leaving = t.isPlaying;
     final confirmed = await _confirm(
       title: leaving ? 'Leave ${t.name}?' : 'Withdraw request?',
-      message: leaving
-          ? "You'll lose your spot and stop getting announcements. You can ask to join again while it's open."
-          : 'The organizer will no longer see your request.',
+      message: t.isOrganizer
+          ? "You'll give up your spot as a player but keep running the tournament. You can join again while it's open."
+          : leaving
+              ? "You'll lose your spot and stop getting announcements. You can ask to join again while it's open."
+              : 'The organizer will no longer see your request.',
       action: leaving ? 'Leave' : 'Withdraw',
     );
     if (!confirmed || !mounted) return;
@@ -439,6 +441,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
           ...actions,
           if (actions.isNotEmpty) const SizedBox(height: AppSpacing.xs),
           chatButton,
+          ..._organizerPlayActions(t),
         ];
       case TournamentRole.organizer:
         return [
@@ -451,6 +454,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
             const SizedBox(height: AppSpacing.xs),
           ],
           chatButton,
+          ..._organizerPlayActions(t),
         ];
       case TournamentRole.accepted:
         return [
@@ -501,6 +505,26 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
 /// Organizer buttons for a tournament with a format: start it once full (or edit the format before anyone is
 /// accepted), then finish each stage once all its results are in.
 extension on _TournamentDetailScreenState {
+  // The organizer can take one of the places themselves while registration is open
+  List<Widget> _organizerPlayActions(TournamentSummary t) {
+    if (t.amPlaying) {
+      if (!t.isOpen) return [];
+      return [
+        TextButton(onPressed: _acting ? null : () => _withdraw(t), child: const Text('Leave as a player')),
+      ];
+    }
+    if (!t.isOpen || t.isFull || (!t.hasFormat && t.hasStarted)) return [];
+    return [
+      const SizedBox(height: AppSpacing.xs),
+      OutlinedButton.icon(
+        onPressed: _acting ? null : () => _run(() => _provider.requestToJoin(t.id), "You're in as a player"),
+        icon: const Icon(Icons.sports_esports_outlined),
+        label: const Text('Play in this tournament'),
+        style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+      ),
+    ];
+  }
+
   List<Widget> _formatActions(TournamentDetail detail) {
     final format = detail.format!;
     final t = detail.tournament;

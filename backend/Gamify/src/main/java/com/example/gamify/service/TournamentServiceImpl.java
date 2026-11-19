@@ -116,7 +116,7 @@ public class TournamentServiceImpl implements TournamentService {
         Player me = findPlayer(username);
         Tournament tournament = findTournament(tournamentId);
         requireOrganizer(tournament, me);
-        for (Long playerId : participantRepository.findAcceptedPlayerIds(tournament)) {
+        for (Long playerId : playersOtherThanOrganizer(tournament)) {
             notify(playerId, "Tournament cancelled", me.getUsername() + " cancelled " + tournament.getName(),
                     PushNotification.CHANNEL_REQUESTS, tournament, "tournament_update");
         }
@@ -128,9 +128,6 @@ public class TournamentServiceImpl implements TournamentService {
     public TournamentDetailResponse requestToJoin(String username, Long tournamentId) {
         Player me = findPlayer(username);
         Tournament tournament = findTournament(tournamentId);
-        if (isOrganizer(tournament, me)) {
-            throw new BadRequestException("You're organizing this tournament");
-        }
         requireOpen(tournament);
         // A tournament with a format takes requests until the organizer starts it
         if (!tournament.hasFormat() && !tournament.getStartsAt().isAfter(OffsetDateTime.now())) {
@@ -144,6 +141,17 @@ public class TournamentServiceImpl implements TournamentService {
             }
         });
         requireRoom(tournament);
+
+        // The organizer doesn't need to ask themselves: they're in straight away
+        if (isOrganizer(tournament, me)) {
+            participantRepository.save(TournamentParticipant.builder()
+                    .tournament(tournament)
+                    .player(me)
+                    .status(ParticipantStatus.ACCEPTED)
+                    .respondedAt(OffsetDateTime.now())
+                    .build());
+            return toDetail(tournament, me);
+        }
 
         participantRepository.save(TournamentParticipant.builder()
                 .tournament(tournament)
@@ -263,6 +271,9 @@ public class TournamentServiceImpl implements TournamentService {
         tournamentRepository.save(tournament);
 
         for (Long playerId : accepted.keySet()) {
+            if (playerId.equals(tournament.getOrganizer().getPlayerId())) {
+                continue;
+            }
             notify(playerId, firstTime ? "Results are in" : "Results updated",
                     tournament.getName() + ": see where you placed",
                     PushNotification.CHANNEL_REQUESTS, tournament, "tournament_update");
@@ -277,7 +288,8 @@ public class TournamentServiceImpl implements TournamentService {
         Tournament tournament = findTournament(tournamentId);
         requireOrganizer(tournament, me);
         requireOpen(tournament);
-        if (participantRepository.countByTournamentAndStatus(tournament, ParticipantStatus.ACCEPTED) > 0) {
+        // The organizer's own entry doesn't lock it: only other players signed up for this format
+        if (!playersOtherThanOrganizer(tournament).isEmpty()) {
             throw new BadRequestException("The format is locked once you've accepted a player");
         }
         formatService.saveFormat(tournament, request);
@@ -406,7 +418,7 @@ public class TournamentServiceImpl implements TournamentService {
                 .content(content.trim())
                 .build());
         // One notification per tournament: a newer announcement replaces the previous one on the phone
-        for (Long playerId : participantRepository.findAcceptedPlayerIds(tournament)) {
+        for (Long playerId : playersOtherThanOrganizer(tournament)) {
             events.publishEvent(new PushNotification(
                     playerId,
                     tournament.getName(),
@@ -492,6 +504,7 @@ public class TournamentServiceImpl implements TournamentService {
         MyStatus myStatus = isOrganizer(t, me) ? MyStatus.ORGANIZER
                 : myRequest == null ? MyStatus.NONE
                 : MyStatus.valueOf(myRequest.name());
+        boolean amPlaying = myRequest == ParticipantStatus.ACCEPTED;
         return new TournamentSummaryResponse(
                 t.getId(),
                 t.getName(),
@@ -503,6 +516,7 @@ public class TournamentServiceImpl implements TournamentService {
                 t.getStatus(),
                 connectionMapper.toPlayerSummary(t.getOrganizer()),
                 myStatus,
+                amPlaying,
                 t.getCompletedAt(),
                 t.getSlots()
         );
@@ -512,6 +526,11 @@ public class TournamentServiceImpl implements TournamentService {
         boolean organizer = isOrganizer(tournament, me);
         List<TournamentParticipant> all = participantRepository.findAllByTournament(tournament);
         long accepted = all.stream().filter(p -> p.getStatus() == ParticipantStatus.ACCEPTED).count();
+        Long organizerId = tournament.getOrganizer().getPlayerId();
+        long acceptedOthers = all.stream()
+                .filter(p -> p.getStatus() == ParticipantStatus.ACCEPTED)
+                .filter(p -> p.getPlayer() == null || !p.getPlayer().getPlayerId().equals(organizerId))
+                .count();
         ParticipantStatus myRequest = all.stream()
                 .filter(p -> p.getPlayer() != null && p.getPlayer().getPlayerId().equals(me.getPlayerId()))
                 .map(TournamentParticipant::getStatus)
@@ -530,7 +549,7 @@ public class TournamentServiceImpl implements TournamentService {
                                 p.getSlotNo()))
                         .toList(),
                 tournament.getResultNotes(),
-                tournament.hasFormat() ? formatService.toResponse(tournament, accepted) : null
+                tournament.hasFormat() ? formatService.toResponse(tournament, acceptedOthers) : null
         );
     }
 
@@ -577,6 +596,14 @@ public class TournamentServiceImpl implements TournamentService {
         if (!isOrganizer(tournament, me)) {
             throw new BadRequestException("Only the organizer can do that");
         }
+    }
+
+    // Accepted players to tell about something the organizer did, leaving out the organizer if they're playing
+    private List<Long> playersOtherThanOrganizer(Tournament tournament) {
+        Long organizerId = tournament.getOrganizer().getPlayerId();
+        return participantRepository.findAcceptedPlayerIds(tournament).stream()
+                .filter(id -> !id.equals(organizerId))
+                .toList();
     }
 
     private static boolean isOrganizer(Tournament tournament, Player player) {

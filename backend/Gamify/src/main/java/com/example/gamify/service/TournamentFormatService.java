@@ -673,7 +673,9 @@ public class TournamentFormatService {
     }
 
     private void notify(TournamentParticipant participant, String title, String body, Tournament tournament) {
-        if (participant == null || participant.getPlayer() == null) {
+        // The organizer caused this update, so a player who is also the organizer doesn't need telling
+        if (participant == null || participant.getPlayer() == null
+                || participant.getPlayer().getPlayerId().equals(tournament.getOrganizer().getPlayerId())) {
             return;
         }
         events.publishEvent(new PushNotification(
