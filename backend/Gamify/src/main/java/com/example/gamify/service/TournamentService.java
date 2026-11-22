@@ -22,6 +22,10 @@ public interface TournamentService {
     TournamentDetailResponse acceptRequest(String username, Long requestId);
     TournamentDetailResponse rejectRequest(String username, Long requestId);
 
+    // Co-organizers: added and removed by the creator; a co-organizer may also step down
+    TournamentDetailResponse addCoOrganizer(String username, Long tournamentId, Long playerId);
+    TournamentDetailResponse removeCoOrganizer(String username, Long tournamentId, Long playerId);
+
     TournamentDetailResponse recordResult(String username, Long tournamentId, RecordResultRequest request);
 
     // Tournaments with a format (stages and fixtures)

@@ -76,7 +76,9 @@ class _FormatBuilderScreenState extends State<FormatBuilderScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Tournament format')),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
+        // The extra bottom space keeps the last button clear of the phone's navigation bar
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter + MediaQuery.viewPaddingOf(context).bottom),
         children: [
           const SectionLabel('PLAYERS'),
           OutlineCard(
@@ -130,6 +132,51 @@ class _FormatBuilderScreenState extends State<FormatBuilderScreen> {
               icon: const Icon(Icons.add),
               label: const Text('Add stage'),
             ),
+          if (_draft.hasLeague) ...[
+            const SizedBox(height: AppSpacing.lg),
+            const SectionLabel('POINTS'),
+            const Text(
+              'What each league and group match is worth in the tables. Knockout matches just need a winner.',
+              style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            OutlineCard(
+              child: Column(
+                children: [
+                  CountStepper(
+                    label: 'Win',
+                    value: _draft.points.win,
+                    min: FormatPoints.min,
+                    max: FormatPoints.max,
+                    onChanged: (v) => _update(() => _draft.points = _draft.points.copyWith(win: v)),
+                  ),
+                  CountStepper(
+                    label: 'Draw',
+                    value: _draft.points.draw,
+                    min: FormatPoints.min,
+                    max: FormatPoints.max,
+                    onChanged: (v) => _update(() => _draft.points = _draft.points.copyWith(draw: v)),
+                  ),
+                  CountStepper(
+                    label: 'Loss',
+                    hint: 'Below 0 takes points away',
+                    value: _draft.points.loss,
+                    min: FormatPoints.min,
+                    max: FormatPoints.max,
+                    onChanged: (v) => _update(() => _draft.points = _draft.points.copyWith(loss: v)),
+                  ),
+                ],
+              ),
+            ),
+            if (!_draft.points.isStandard)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: () => _update(() => _draft.points = FormatPoints.standard),
+                  child: const Text('Reset to 3 · 1 · 0'),
+                ),
+              ),
+          ],
           const SizedBox(height: AppSpacing.lg),
           const SectionLabel('STATS'),
           const Text(
@@ -425,6 +472,14 @@ class FormatSummaryCard extends StatelessWidget {
               child: Text(
                 'Stage ${i + 1}  ${describe(draft.stages[i], i == draft.stages.length - 1)}',
                 style: const TextStyle(color: AppColors.textSecondary),
+              ),
+            ),
+          if (draft.hasLeague)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Points: ${draft.points.summary}',
+                style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
             ),
           if (draft.stats.isNotEmpty)

@@ -62,7 +62,9 @@ class _FinishStageScreenState extends State<FinishStageScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(widget.isLast ? 'Finish tournament' : 'Finish stage ${widget.stage.seq}')),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
+        // The extra bottom space keeps the last button clear of the phone's navigation bar
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter + MediaQuery.viewPaddingOf(context).bottom),
         children: [
           Text(
             widget.isLast

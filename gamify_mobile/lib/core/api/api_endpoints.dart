@@ -61,6 +61,7 @@ class ApiEndpoints {
   static const String tournamentChats = '/tournaments/chats';
   static String tournament(int tournamentId) => '/tournaments/$tournamentId';
   static String joinTournament(int tournamentId) => '/tournaments/$tournamentId/join';
+  static String tournamentOrganizer(int tournamentId, int playerId) => '/tournaments/$tournamentId/organizers/$playerId';
   static String acceptTournamentRequest(int requestId) => '/tournaments/requests/$requestId/accept';
   static String rejectTournamentRequest(int requestId) => '/tournaments/requests/$requestId/reject';
   static String tournamentResult(int tournamentId) => '/tournaments/$tournamentId/result';

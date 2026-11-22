@@ -94,6 +94,24 @@ public class TournamentController {
         return ResponseEntity.ok(tournamentService.withdraw(currentUsername, tournamentId));
     }
 
+    // The creator adds a player to help run the tournament
+    @PostMapping("/tournaments/{tournamentId}/organizers/{playerId}")
+    public ResponseEntity<TournamentDetailResponse> addCoOrganizer(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @PathVariable Long playerId) {
+        return ResponseEntity.ok(tournamentService.addCoOrganizer(currentUsername, tournamentId, playerId));
+    }
+
+    // The creator removes a co-organizer, or a co-organizer steps down (their own id)
+    @DeleteMapping("/tournaments/{tournamentId}/organizers/{playerId}")
+    public ResponseEntity<TournamentDetailResponse> removeCoOrganizer(
+            @AuthenticationPrincipal String currentUsername,
+            @PathVariable Long tournamentId,
+            @PathVariable Long playerId) {
+        return ResponseEntity.ok(tournamentService.removeCoOrganizer(currentUsername, tournamentId, playerId));
+    }
+
     // Pending join requests to every tournament the player organizes
     @GetMapping("/tournaments/requests")
     public ResponseEntity<List<TournamentRequestResponse>> getPendingRequests(@AuthenticationPrincipal String currentUsername) {

@@ -38,7 +38,9 @@ class _StartTournamentSheetState extends State<StartTournamentSheet> {
       minChildSize: 0.4,
       maxChildSize: 0.95,
       builder: (context, scrollController) => Padding(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
+        // Keeps the start button above the phone's navigation bar
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter + MediaQuery.viewPaddingOf(context).bottom),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

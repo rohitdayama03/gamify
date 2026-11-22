@@ -22,10 +22,11 @@ public interface TournamentRepository extends JpaRepository<Tournament, Long> {
     @Query("SELECT t FROM Tournament t JOIN FETCH t.organizer WHERE t.status = com.example.gamify.entity.TournamentStatus.OPEN AND t.game = :game ORDER BY t.startsAt ASC")
     List<Tournament> findOpenByGame(@Param("game") Game game, Pageable pageable);
 
-    // Tournaments the player organizes or has asked to join, latest start first
+    // Tournaments the player created, co-organizes or has asked to join, latest start first
     @Query("""
             SELECT t FROM Tournament t JOIN FETCH t.organizer
             WHERE t.organizer = :player
+            OR t.id IN (SELECT c.tournament.id FROM TournamentCoOrganizer c WHERE c.player = :player)
             OR t.id IN (SELECT p.tournament.id FROM TournamentParticipant p WHERE p.player = :player)
             ORDER BY t.startsAt DESC
             """)

@@ -8,15 +8,18 @@ import java.util.List;
 /**
  * A tournament's format. {@code currentStageId} is the first unfinished stage once the tournament has started
  * (null before the start and after the end). {@code editable} is true while the organizer may still change the
- * format: before anyone has been accepted.
+ * format: before anyone has been accepted. {@code points} are what a league win, draw and loss are worth.
  */
 public record TournamentFormatResponse(
         int slots,
         List<Stage> stages,
         List<Stat> stats,
         Long currentStageId,
-        boolean editable
+        boolean editable,
+        Points points
 ) {
+    public record Points(int win, int draw, int loss) {}
+
     public record Stage(
             Long id,
             int seq,

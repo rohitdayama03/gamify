@@ -57,7 +57,9 @@ class _RecordResultScreenState extends State<RecordResultScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(correcting ? 'Edit result' : 'Record result')),
       body: ListView(
-        padding: const EdgeInsets.all(AppSpacing.gutter),
+        // The extra bottom space keeps the last button clear of the phone's navigation bar
+        padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter, AppSpacing.gutter + MediaQuery.viewPaddingOf(context).bottom),
         children: [
           Text(
             'Set each player\'s place. 1st is the winner; players can share a place, and you can leave anyone unplaced.',

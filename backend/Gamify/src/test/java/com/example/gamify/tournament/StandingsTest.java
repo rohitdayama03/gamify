@@ -12,10 +12,31 @@ class StandingsTest {
         return new Standings.Result(home, away, hs, as);
     }
 
+    // These cases use 2 points for a win and 1 for a draw
+    private static List<Standings.Row> rank(List<Long> participants, List<Standings.Result> results) {
+        return Standings.rank(participants, results, Standings.Points.LEGACY);
+    }
+
+    @Test
+    void organizerChosenPointsIncludingALossPenalty() {
+        // Scored 3 / 1 / -1. 3 wins twice (6), 1 wins once and loses once (2), 2 loses twice (-2)
+        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L, 3L),
+                List.of(r(1, 2, 2, 0), r(3, 2, 1, 0), r(3, 1, 1, 0)), new Standings.Points(3, 1, -1));
+        assertEquals(List.of(3L, 1L, 2L), rows.stream().map(Standings.Row::participantId).toList());
+        assertEquals(List.of(6, 2, -2), rows.stream().map(Standings.Row::points).toList());
+    }
+
+    @Test
+    void defaultIsThreeForAWinOneForADraw() {
+        assertEquals(new Standings.Points(3, 1, 0), Standings.Points.DEFAULT);
+        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L), List.of(r(1, 2, 1, 0)), Standings.Points.DEFAULT);
+        assertEquals(List.of(3, 0), rows.stream().map(Standings.Row::points).toList());
+    }
+
     @Test
     void twoPointsForAWinOneForADraw() {
         // 1 beats 2, 2 draws 3, 3 draws 1
-        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L, 3L), List.of(r(1, 2, 2, 0), r(2, 3, 1, 1), r(3, 1, 0, 0)));
+        List<Standings.Row> rows = rank(List.of(1L, 2L, 3L), List.of(r(1, 2, 2, 0), r(2, 3, 1, 1), r(3, 1, 0, 0)));
         assertEquals(List.of(1L, 3L, 2L), rows.stream().map(Standings.Row::participantId).toList());
         assertEquals(List.of(3, 2, 1), rows.stream().map(Standings.Row::points).toList());
         assertEquals(1, rows.get(0).won());
@@ -27,10 +48,10 @@ class StandingsTest {
     @Test
     void goalDifferenceThenGoalsScored() {
         // 1 and 2 both win once; 1 by more
-        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L, 3L, 4L), List.of(r(1, 3, 3, 0), r(2, 4, 1, 0)));
+        List<Standings.Row> rows = rank(List.of(1L, 2L, 3L, 4L), List.of(r(1, 3, 3, 0), r(2, 4, 1, 0)));
         assertEquals(List.of(1L, 2L), rows.subList(0, 2).stream().map(Standings.Row::participantId).toList());
         // Same difference, more goals wins
-        rows = Standings.rank(List.of(1L, 2L, 3L, 4L), List.of(r(1, 3, 1, 0), r(2, 4, 3, 2)));
+        rows = rank(List.of(1L, 2L, 3L, 4L), List.of(r(1, 3, 1, 0), r(2, 4, 3, 2)));
         assertEquals(2L, rows.get(0).participantId());
     }
 
@@ -45,7 +66,7 @@ class StandingsTest {
                 r(2, 4, 2, 0),
                 r(3, 4, 0, 1));
         // 1: W W L = 4 pts, GF 3 GA 1; 2: W L W = 4 pts, GF 3 GA 1 -> level, 2 beat 1
-        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L, 3L, 4L), results);
+        List<Standings.Row> rows = rank(List.of(1L, 2L, 3L, 4L), results);
         assertEquals(2L, rows.get(0).participantId());
         assertEquals(1L, rows.get(1).participantId());
         assertNotEquals(rows.get(0).tieBlock(), rows.get(1).tieBlock());
@@ -53,7 +74,7 @@ class StandingsTest {
 
     @Test
     void fullyLevelPlayersShareATieBlock() {
-        List<Standings.Row> rows = Standings.rank(List.of(1L, 2L, 3L), List.of(r(1, 2, 1, 1), r(3, 1, 0, 0), r(2, 3, 0, 0)));
+        List<Standings.Row> rows = rank(List.of(1L, 2L, 3L), List.of(r(1, 2, 1, 1), r(3, 1, 0, 0), r(2, 3, 0, 0)));
         // Everyone drew; 1 and 2 scored 1, 3 scored 0
         assertEquals(rows.get(0).tieBlock(), rows.get(1).tieBlock());
         assertTrue(Standings.isTied(rows, 0));
@@ -63,7 +84,7 @@ class StandingsTest {
 
     @Test
     void playersWithNoMatchesAreListed() {
-        List<Standings.Row> rows = Standings.rank(List.of(5L, 6L), List.of());
+        List<Standings.Row> rows = rank(List.of(5L, 6L), List.of());
         assertEquals(2, rows.size());
         assertEquals(0, rows.get(0).played());
     }

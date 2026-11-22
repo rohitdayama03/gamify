@@ -31,6 +31,8 @@ class TournamentSummary {
   // True when the user has a place as a player. An organizer who entered their own tournament keeps the
   // organizer role and has this set.
   final bool amPlaying;
+  // The creator, as opposed to a co-organizer: only they can cancel the tournament and manage organizers
+  final bool amOwner;
   // Players in a tournament with stages and fixtures; null for a simple tournament
   final int? slots;
 
@@ -47,6 +49,7 @@ class TournamentSummary {
     required this.organizer,
     required this.myRole,
     this.amPlaying = false,
+    this.amOwner = false,
     this.slots,
   });
 
@@ -78,6 +81,8 @@ class TournamentSummary {
       organizer: PlayerSummary.fromJson(json['organizer']),
       myRole: _parseRole(json['myStatus']),
       amPlaying: json['amPlaying'] == true,
+      // An older server has no co-organizers, so its organizer is the creator
+      amOwner: json['amOwner'] ?? json['myStatus'] == 'ORGANIZER',
       slots: json['slots'],
     );
   }
@@ -122,8 +127,16 @@ class TournamentDetail {
   final String? resultNotes;
   // Stages, stats and progress; null for a simple tournament
   final TournamentFormat? format;
+  // Players the creator added to help run it, in the order they were added
+  final List<PlayerSummary> coOrganizers;
 
-  TournamentDetail({required this.tournament, required this.participants, this.resultNotes, this.format});
+  TournamentDetail({
+    required this.tournament,
+    required this.participants,
+    this.resultNotes,
+    this.format,
+    this.coOrganizers = const [],
+  });
 
   List<TournamentParticipant> get accepted => participants.where((p) => p.status == ParticipantStatus.accepted).toList();
   List<TournamentParticipant> get pending => participants.where((p) => p.status == ParticipantStatus.pending).toList();
@@ -135,6 +148,7 @@ class TournamentDetail {
       participants: participants.map((e) => TournamentParticipant.fromJson(e)).toList(),
       resultNotes: json['resultNotes'],
       format: json['format'] == null ? null : TournamentFormat.fromJson(json['format']),
+      coOrganizers: ((json['coOrganizers'] ?? []) as List).map((e) => PlayerSummary.fromJson(e)).toList(),
     );
   }
 }

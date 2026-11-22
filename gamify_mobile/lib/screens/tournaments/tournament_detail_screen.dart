@@ -3,8 +3,10 @@ import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/time_format.dart';
+import '../../models/connection_model.dart';
 import '../../models/tournament_format_model.dart';
 import '../../models/tournament_model.dart';
+import '../../providers/player_provider.dart';
 import '../../providers/tournament_provider.dart';
 import '../../widgets/game_logo.dart';
 import '../../widgets/primary_button.dart';
@@ -14,6 +16,7 @@ import 'finish_stage_screen.dart';
 import 'fixtures_view.dart';
 import 'format_builder_screen.dart';
 import 'match_result_sheet.dart';
+import 'organizer_picker_screen.dart';
 import 'record_result_screen.dart';
 import 'share_tournament_sheet.dart';
 import 'standings_view.dart';
@@ -75,9 +78,18 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
       _loading = false;
       if (detail != null) _detail = detail;
       _loadError = detail == null ? _provider.errorMessage : null;
-      if (detail?.format != null) _tabs ??= TabController(length: 4, vsync: this);
+      if (detail?.format != null) _syncTabs(detail!.format!);
     });
     if (detail?.format != null) await _loadFormatData();
+  }
+
+  // Overview, Fixtures, Standings and Leaderboard, plus Stats when the tournament tracks any
+  void _syncTabs(TournamentFormat format) {
+    final length = format.stats.isEmpty ? 4 : 5;
+    final current = _tabs;
+    if (current != null && current.length == length) return;
+    _tabs = TabController(length: length, vsync: this, initialIndex: (current?.index ?? 0).clamp(0, length - 1));
+    current?.dispose();
   }
 
   Future<void> _loadFormatData() async {
@@ -94,7 +106,11 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
 
   // After an action that answered with the tournament: show it, then refresh the fixtures and tables
   void _applyUpdate(TournamentDetail updated) {
-    setState(() => _detail = updated);
+    setState(() {
+      _detail = updated;
+      // Editing the format can add or remove stats, and with them the Stats tab
+      if (updated.format != null) _syncTabs(updated.format!);
+    });
     if (updated.format != null) _loadFormatData();
   }
 
@@ -229,6 +245,42 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
     if (ok) navigator.pop();
   }
 
+  Future<void> _addOrganizer(TournamentDetail detail) async {
+    final t = detail.tournament;
+    final player = await Navigator.push<PlayerSummary>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrganizerPickerScreen(
+          unavailable: {t.organizer.playerId, for (final o in detail.coOrganizers) o.playerId},
+        ),
+      ),
+    );
+    if (player == null || !mounted) return;
+    await _run(() => _provider.addCoOrganizer(t.id, player.playerId), '${player.username} is now an organizer');
+  }
+
+  Future<void> _removeOrganizer(TournamentSummary t, PlayerSummary player) async {
+    final confirmed = await _confirm(
+      title: 'Remove ${player.username}?',
+      message: "They'll no longer be able to run ${t.name}. If they're playing, they keep their place.",
+      action: 'Remove',
+    );
+    if (!confirmed || !mounted) return;
+    await _run(() => _provider.removeCoOrganizer(t.id, player.playerId), '${player.username} is no longer an organizer');
+  }
+
+  Future<void> _stepDown(TournamentSummary t) async {
+    final myId = Provider.of<PlayerProvider>(context, listen: false).currentPlayer?.playerId;
+    if (myId == null) return;
+    final confirmed = await _confirm(
+      title: 'Step down as organizer?',
+      message: "You'll no longer be able to run ${t.name}. If you're playing, you keep your place.",
+      action: 'Step down',
+    );
+    if (!confirmed || !mounted) return;
+    await _run(() => _provider.removeCoOrganizer(t.id, myId), "You're no longer an organizer");
+  }
+
   Future<void> _recordResult(TournamentDetail detail) async {
     final updated = await Navigator.push<TournamentDetail>(
       context,
@@ -282,7 +334,13 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
                 controller: tabs,
                 isScrollable: true,
                 tabAlignment: TabAlignment.start,
-                tabs: const [Tab(text: 'Overview'), Tab(text: 'Fixtures'), Tab(text: 'Standings'), Tab(text: 'Leaderboard')],
+                tabs: [
+                  const Tab(text: 'Overview'),
+                  const Tab(text: 'Fixtures'),
+                  const Tab(text: 'Standings'),
+                  const Tab(text: 'Leaderboard'),
+                  if (tabs.length == 5) const Tab(text: 'Stats'),
+                ],
               ),
         actions: [
           if (t != null)
@@ -291,7 +349,8 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
               tooltip: 'Share tournament',
               onPressed: () => ShareTournamentSheet.show(context, t),
             ),
-          if (t != null && t.myRole == TournamentRole.organizer)
+          // Only the creator can cancel; co-organizers just help run it
+          if (t != null && t.amOwner)
             PopupMenuButton<String>(
               onSelected: (_) => _cancelTournament(t),
               itemBuilder: (_) => const [
@@ -332,6 +391,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
                           _leaderboard,
                           (l) => LeaderboardView(leaderboard: l, completed: t!.completed, onRefresh: _loadFormatData),
                         ),
+                        if (tabs.length == 5) _tabContent(_leaderboard, (l) => StatsView(leaderboard: l, onRefresh: _loadFormatData)),
                       ],
                     ),
     );
@@ -411,6 +471,7 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
           const SizedBox(height: AppSpacing.xs),
           for (final p in detail.pending) _RequestTile(request: p, onAnswered: (updated) => setState(() => _detail = updated)),
         ],
+        if (isOrganizer || detail.coOrganizers.isNotEmpty) ..._buildOrganizers(detail),
         const SizedBox(height: AppSpacing.lg),
         Text('PARTICIPANTS  [${detail.accepted.length}]', style: AppFonts.label()),
         const SizedBox(height: AppSpacing.xs),
@@ -423,6 +484,35 @@ class _TournamentDetailScreenState extends State<TournamentDetailScreen> with Si
           for (final p in detail.accepted) _ParticipantTile(participant: p, highlight: false),
       ],
     );
+  }
+
+  // Up to this many co-organizers besides the creator (the server enforces it too)
+  static const _maxCoOrganizers = 5;
+
+  List<Widget> _buildOrganizers(TournamentDetail detail) {
+    final t = detail.tournament;
+    final coOrganizers = detail.coOrganizers;
+    return [
+      const SizedBox(height: AppSpacing.lg),
+      Text('ORGANIZERS  [${1 + coOrganizers.length}]', style: AppFonts.label()),
+      const SizedBox(height: AppSpacing.xs),
+      _OrganizerTile(player: t.organizer, role: 'Creator'),
+      for (final o in coOrganizers)
+        _OrganizerTile(
+          player: o,
+          role: 'Co-organizer',
+          onRemove: t.amOwner && !_acting ? () => _removeOrganizer(t, o) : null,
+        ),
+      if (t.amOwner && coOrganizers.length < _maxCoOrganizers)
+        OutlinedButton.icon(
+          onPressed: _acting ? null : () => _addOrganizer(detail),
+          icon: const Icon(Icons.person_add_alt),
+          label: const Text('Add organizer'),
+          style: OutlinedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
+        ),
+      if (t.isOrganizer && !t.amOwner)
+        TextButton(onPressed: _acting ? null : () => _stepDown(t), child: const Text('Step down as organizer')),
+    ];
   }
 
   List<Widget> _buildActions(TournamentDetail detail) {
@@ -613,6 +703,14 @@ class _FormatOverview extends StatelessWidget {
               ],
             ),
           ),
+        if (format.hasLeague)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Points: ${format.points.summary}',
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+            ),
+          ),
         if (format.stats.isNotEmpty)
           Padding(
             padding: const EdgeInsets.only(top: 4),
@@ -675,6 +773,36 @@ class _ParticipantTile extends StatelessWidget {
             : Text(
                 ordinal(placement),
                 style: TextStyle(color: highlight ? AppColors.primary : AppColors.textSecondary, fontWeight: FontWeight.w700),
+              ),
+      ),
+    );
+  }
+}
+
+/// Someone running the tournament. The creator gets [onRemove] on each co-organizer.
+class _OrganizerTile extends StatelessWidget {
+  final PlayerSummary player;
+  final String role;
+  final VoidCallback? onRemove;
+
+  const _OrganizerTile({required this.player, required this.role, this.onRemove});
+
+  @override
+  Widget build(BuildContext context) {
+    return OpenProfileOnTap(
+      playerId: player.playerId,
+      username: player.username,
+      child: ListTile(
+        contentPadding: EdgeInsets.zero,
+        leading: PlayerAvatar(name: player.username, url: player.avatarUrl),
+        title: Text(player.username, overflow: TextOverflow.ellipsis),
+        subtitle: Text(role, style: const TextStyle(color: AppColors.textSecondary)),
+        trailing: onRemove == null
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                tooltip: 'Remove ${player.username}',
+                onPressed: onRemove,
               ),
       ),
     );

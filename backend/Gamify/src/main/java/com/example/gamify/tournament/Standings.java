@@ -3,15 +3,20 @@ package com.example.gamify.tournament;
 import java.util.*;
 
 /**
- * League table maths. A win is worth {@value #WIN_POINTS} points, a draw {@value #DRAW_POINTS}, a loss nothing.
+ * League table maths, with the points for a win, draw and loss set per tournament ({@link Points}).
  * Players are ranked by points, then goal difference, then goals scored, then the same three counted only over
  * the matches between the players still level. Players level on all of that share a {@code tieBlock}; the
  * organizer settles their order when finishing the stage.
  */
 public final class Standings {
 
-    public static final int WIN_POINTS = 2;
-    public static final int DRAW_POINTS = 1;
+    /** Points for a win, a draw and a loss. A loss may cost points (negative). */
+    public record Points(int win, int draw, int loss) {
+        /** What a tournament gets when its organizer doesn't choose. */
+        public static final Points DEFAULT = new Points(3, 1, 0);
+        /** Tournaments created before points could be chosen were scored this way, and keep it. */
+        public static final Points LEGACY = new Points(2, 1, 0);
+    }
 
     private Standings() {}
 
@@ -29,8 +34,8 @@ public final class Standings {
      * Ranks {@code participants} (in seed order, which decides the display order of players fully level) on the
      * results between them. Results involving anyone else are ignored.
      */
-    public static List<Row> rank(List<Long> participants, List<Result> results) {
-        Map<Long, Tally> table = tally(participants, results);
+    public static List<Row> rank(List<Long> participants, List<Result> results, Points points) {
+        Map<Long, Tally> table = tally(participants, results, points);
         List<Tally> sorted = new ArrayList<>(table.values());
         Comparator<Tally> main = Comparator.<Tally>comparingInt(t -> t.points)
                 .thenComparingInt(t -> t.goalsFor - t.goalsAgainst)
@@ -48,7 +53,7 @@ public final class Standings {
             if (end - start == 1) {
                 blocks[start] = start;
             } else {
-                headToHead(sorted, start, end, results, blocks);
+                headToHead(sorted, start, end, results, points, blocks);
             }
             start = end;
         }
@@ -69,9 +74,9 @@ public final class Standings {
     }
 
     // Re-sorts sorted[start, end) — players level on the main key — by their results against each other
-    private static void headToHead(List<Tally> sorted, int start, int end, List<Result> results, int[] blocks) {
+    private static void headToHead(List<Tally> sorted, int start, int end, List<Result> results, Points points, int[] blocks) {
         List<Tally> level = sorted.subList(start, end);
-        Map<Long, Tally> mini = tally(level.stream().map(t -> t.id).toList(), results);
+        Map<Long, Tally> mini = tally(level.stream().map(t -> t.id).toList(), results, points);
         Comparator<Tally> byMini = Comparator.<Tally>comparingInt(t -> mini.get(t.id).points)
                 .thenComparingInt(t -> mini.get(t.id).goalsFor - mini.get(t.id).goalsAgainst)
                 .thenComparingInt(t -> mini.get(t.id).goalsFor)
@@ -82,7 +87,7 @@ public final class Standings {
         }
     }
 
-    private static Map<Long, Tally> tally(List<Long> participants, List<Result> results) {
+    private static Map<Long, Tally> tally(List<Long> participants, List<Result> results, Points points) {
         Map<Long, Tally> table = new LinkedHashMap<>();
         for (Long id : participants) {
             table.put(id, new Tally(id));
@@ -93,8 +98,8 @@ public final class Standings {
             if (home == null || away == null) {
                 continue;
             }
-            home.add(r.homeScore(), r.awayScore());
-            away.add(r.awayScore(), r.homeScore());
+            home.add(r.homeScore(), r.awayScore(), points);
+            away.add(r.awayScore(), r.homeScore(), points);
         }
         return table;
     }
@@ -107,18 +112,19 @@ public final class Standings {
             this.id = id;
         }
 
-        void add(int scored, int conceded) {
+        void add(int scored, int conceded, Points scoring) {
             played++;
             goalsFor += scored;
             goalsAgainst += conceded;
             if (scored > conceded) {
                 won++;
-                points += WIN_POINTS;
+                points += scoring.win();
             } else if (scored == conceded) {
                 drawn++;
-                points += DRAW_POINTS;
+                points += scoring.draw();
             } else {
                 lost++;
+                points += scoring.loss();
             }
         }
     }

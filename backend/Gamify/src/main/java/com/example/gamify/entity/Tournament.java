@@ -1,5 +1,6 @@
 package com.example.gamify.entity;
 
+import com.example.gamify.tournament.Standings;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -58,6 +59,16 @@ public class Tournament {
     @Column(name = "slots")
     private Integer slots;
 
+    // League points for a win, draw and loss; null on tournaments from before they could be chosen
+    @Column(name = "win_points")
+    private Integer winPoints;
+
+    @Column(name = "draw_points")
+    private Integer drawPoints;
+
+    @Column(name = "loss_points")
+    private Integer lossPoints;
+
     @Column(name = "started_at")
     private OffsetDateTime startedAt;
 
@@ -70,6 +81,10 @@ public class Tournament {
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
+
+    public Standings.Points points() {
+        return winPoints == null ? Standings.Points.LEGACY : new Standings.Points(winPoints, drawPoints, lossPoints);
+    }
 
     public boolean hasFormat() {
         return slots != null;

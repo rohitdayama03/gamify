@@ -6,10 +6,12 @@ import com.example.gamify.entity.TournamentStatus;
 import java.time.OffsetDateTime;
 
 /**
- * A tournament as seen by the current player. {@code myStatus} is ORGANIZER, PENDING, ACCEPTED,
+ * A tournament as seen by the current player. {@code organizer} is the creator. {@code myStatus} is ORGANIZER
+ * (for the creator and co-organizers alike), PENDING, ACCEPTED,
  * REJECTED, or NONE when they haven't asked to join. {@code amPlaying} is true when they're an accepted
  * player; it's the only way to tell an organizer who has entered their own tournament, whose
- * {@code myStatus} stays ORGANIZER. {@code slots} is set for a tournament with a format.
+ * {@code myStatus} stays ORGANIZER. {@code amOwner} is true for the creator only, who alone can cancel the
+ * tournament and manage organizers. {@code slots} is set for a tournament with a format.
  */
 public record TournamentSummaryResponse(
         Long id,
@@ -23,6 +25,7 @@ public record TournamentSummaryResponse(
         PlayerSummaryResponse organizer,
         MyStatus myStatus,
         boolean amPlaying,
+        boolean amOwner,
         OffsetDateTime completedAt,
         Integer slots
 ) {

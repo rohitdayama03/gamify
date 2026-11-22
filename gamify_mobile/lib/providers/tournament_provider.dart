@@ -4,6 +4,7 @@ import '../core/api/api_client.dart';
 import '../core/api/api_endpoints.dart';
 import '../core/api/api_error.dart';
 import '../models/chat_model.dart';
+import '../models/connection_model.dart';
 import '../models/game.dart';
 import '../models/tournament_format_model.dart';
 import '../models/tournament_model.dart';
@@ -152,6 +153,8 @@ class TournamentProvider extends ChangeNotifier {
   Future<TournamentFixtures?> recordMatch(
     int id,
     int matchId, {
+    // HOME, AWAY or DRAW
+    required String winner,
     required int homeScore,
     required int awayScore,
     int? homePens,
@@ -160,6 +163,7 @@ class TournamentProvider extends ChangeNotifier {
   }) async {
     try {
       final response = await _apiClient.dio.put(ApiEndpoints.tournamentMatch(id, matchId), data: {
+        'winner': winner,
         'homeScore': homeScore,
         'awayScore': awayScore,
         'homePens': homePens,
@@ -192,6 +196,28 @@ class TournamentProvider extends ChangeNotifier {
 
   Future<TournamentDetail?> requestToJoin(int id) =>
       _detailRequest(() => _apiClient.dio.post(ApiEndpoints.joinTournament(id)), 'Could not send your request');
+
+  /// Creator only: the player becomes a co-organizer straight away.
+  Future<TournamentDetail?> addCoOrganizer(int id, int playerId) => _detailRequest(
+      () => _apiClient.dio.post(ApiEndpoints.tournamentOrganizer(id, playerId)), 'Could not add the organizer');
+
+  /// The creator removes a co-organizer, or a co-organizer passes their own id to step down.
+  Future<TournamentDetail?> removeCoOrganizer(int id, int playerId) => _detailRequest(
+      () => _apiClient.dio.delete(ApiEndpoints.tournamentOrganizer(id, playerId)), 'Could not remove the organizer');
+
+  /// Players whose username starts with [username], for picking a co-organizer. Null on failure.
+  Future<List<PlayerSummary>?> findPlayers(String username) async {
+    try {
+      final response = await _apiClient.dio.get(ApiEndpoints.searchPlayers,
+          queryParameters: {'username': username, 'size': 20, 'sortBy': 'username', 'sortDirection': 'ASC'});
+      _errorMessage = null;
+      final List content = response.data['content'] ?? [];
+      return content.map((e) => PlayerSummary.fromJson(e)).toList();
+    } on DioException catch (e) {
+      _errorMessage = apiErrorMessage(e, 'Search failed');
+      return null;
+    }
+  }
 
   Future<TournamentDetail?> withdraw(int id) =>
       _detailRequest(() => _apiClient.dio.delete(ApiEndpoints.joinTournament(id)), 'Could not withdraw');

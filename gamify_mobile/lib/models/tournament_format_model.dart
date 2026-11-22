@@ -99,6 +99,43 @@ enum FormatTemplate {
   const FormatTemplate(this.label);
 }
 
+/// What a league or group match is worth: points for a win, a draw and a loss (a loss may cost points).
+class FormatPoints {
+  static const int min = -10;
+  static const int max = 10;
+  static const standard = FormatPoints(win: 3, draw: 1, loss: 0);
+  // How tournaments were scored before points could be chosen; an older server sends no points
+  static const legacy = FormatPoints(win: 2, draw: 1, loss: 0);
+
+  final int win;
+  final int draw;
+  final int loss;
+
+  const FormatPoints({required this.win, required this.draw, required this.loss});
+
+  factory FormatPoints.fromJson(Map<String, dynamic>? json) =>
+      json == null ? legacy : FormatPoints(win: json['win'], draw: json['draw'], loss: json['loss']);
+
+  Map<String, dynamic> toJson() => {'win': win, 'draw': draw, 'loss': loss};
+
+  FormatPoints copyWith({int? win, int? draw, int? loss}) =>
+      FormatPoints(win: win ?? this.win, draw: draw ?? this.draw, loss: loss ?? this.loss);
+
+  bool get isStandard => win == standard.win && draw == standard.draw && loss == standard.loss;
+
+  // The server makes the same checks
+  String? get problem {
+    if (win <= loss) return 'A win must be worth more points than a loss';
+    if (draw > win || draw < loss) return 'A draw must be worth between a loss and a win';
+    return null;
+  }
+
+  static String _pts(int value) => '$value ${value == 1 || value == -1 ? 'pt' : 'pts'}';
+
+  /// "Win 3 pts · Draw 1 pt · Loss 0 pts"
+  String get summary => 'Win ${_pts(win)} · Draw ${_pts(draw)} · Loss ${_pts(loss)}';
+}
+
 class FormatDraft {
   static const int minSlots = 2;
   static const int maxSlots = 64;
@@ -109,8 +146,12 @@ class FormatDraft {
   int slots;
   List<StageDraft> stages;
   List<StatDraft> stats;
+  FormatPoints points;
 
-  FormatDraft({required this.slots, required this.stages, required this.stats});
+  FormatDraft({required this.slots, required this.stages, required this.stats, this.points = FormatPoints.standard});
+
+  // Points only matter for league and group stages
+  bool get hasLeague => stages.any((s) => s.type == StageType.league);
 
   factory FormatDraft.initial() => FormatDraft.fromTemplate(FormatTemplate.groupsKnockout, 16, stats: const [
         StatDraft('Shots', StatAggregation.sum),
@@ -148,14 +189,17 @@ class FormatDraft {
             ),
         ],
         stats: [for (final s in format.stats) StatDraft(s.label, s.aggregation)],
+        points: format.points,
       );
 
-  FormatDraft copy() => FormatDraft(slots: slots, stages: stages.map((s) => s.copy()).toList(), stats: List.of(stats));
+  FormatDraft copy() =>
+      FormatDraft(slots: slots, stages: stages.map((s) => s.copy()).toList(), stats: List.of(stats), points: points);
 
   Map<String, dynamic> toJson() => {
         'slots': slots,
         'stages': stages.map((s) => s.toJson()).toList(),
         'stats': stats.map((s) => s.toJson()).toList(),
+        'points': points.toJson(),
       };
 
   /// The same checks the server makes, so the builder can explain problems as they happen.
@@ -219,6 +263,7 @@ class FormatDraft {
     }
     final total = checks.fold(0, (sum, c) => sum + c.matches);
     if (total > maxMatches) return 'This format has $total matches; keep it to $maxMatches or fewer';
+    if (hasLeague) return points.problem;
     return null;
   }
 
@@ -297,6 +342,7 @@ class TournamentFormat {
   final int? currentStageId;
   // The organizer may still change it (nobody accepted yet)
   final bool editable;
+  final FormatPoints points;
 
   TournamentFormat({
     required this.slots,
@@ -304,7 +350,10 @@ class TournamentFormat {
     required this.stats,
     this.currentStageId,
     required this.editable,
+    this.points = FormatPoints.legacy,
   });
+
+  bool get hasLeague => stages.any((s) => s.type == StageType.league);
 
   FormatStage? get currentStage {
     for (final s in stages) {
@@ -319,6 +368,7 @@ class TournamentFormat {
         stats: ((json['stats'] ?? []) as List).map((e) => FormatStat.fromJson(e)).toList(),
         currentStageId: json['currentStageId'],
         editable: json['editable'] ?? false,
+        points: FormatPoints.fromJson(json['points']),
       );
 }
 
@@ -564,13 +614,15 @@ class StageTable {
 }
 
 class TournamentLeaderboard {
+  final FormatPoints points;
   final List<FormatStat> stats;
   final List<LeaderboardRow> overall;
   final List<StageTable> stages;
 
-  TournamentLeaderboard({required this.stats, required this.overall, required this.stages});
+  TournamentLeaderboard({this.points = FormatPoints.legacy, required this.stats, required this.overall, required this.stages});
 
   factory TournamentLeaderboard.fromJson(Map<String, dynamic> json) => TournamentLeaderboard(
+        points: FormatPoints.fromJson(json['points']),
         stats: ((json['stats'] ?? []) as List).map((e) => FormatStat.fromJson(e)).toList(),
         overall: ((json['overall'] ?? []) as List).map((e) => LeaderboardRow.fromJson(e)).toList(),
         stages: ((json['stages'] ?? []) as List).map((e) => StageTable.fromJson(e)).toList(),

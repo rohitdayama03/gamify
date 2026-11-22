@@ -58,10 +58,14 @@ public class TournamentFormatService {
                 .toList();
         List<PlannedStage> plan = FormatPlanner.plan(request.slots(), specs);
         List<TournamentFormatRequest.Stat> stats = checkStats(request.stats());
+        Standings.Points points = checkPoints(request.points());
 
         deleteFormat(tournament);
         tournament.setSlots(request.slots());
         tournament.setMaxParticipants(request.slots());
+        tournament.setWinPoints(points.win());
+        tournament.setDrawPoints(points.draw());
+        tournament.setLossPoints(points.loss());
 
         for (int i = 0; i < plan.size(); i++) {
             PlannedStage planned = plan.get(i);
@@ -97,6 +101,25 @@ public class TournamentFormatService {
         }
     }
 
+    // A win must be worth more than a loss, with a draw in between (or equal to either)
+    private static Standings.Points checkPoints(TournamentFormatRequest.Points requested) {
+        if (requested == null) {
+            return Standings.Points.DEFAULT;
+        }
+        if (requested.win() <= requested.loss()) {
+            throw new BadRequestException("A win must be worth more points than a loss");
+        }
+        if (requested.draw() > requested.win() || requested.draw() < requested.loss()) {
+            throw new BadRequestException("A draw must be worth between a loss and a win");
+        }
+        return new Standings.Points(requested.win(), requested.draw(), requested.loss());
+    }
+
+    private static TournamentFormatResponse.Points toPointsResponse(Tournament tournament) {
+        Standings.Points points = tournament.points();
+        return new TournamentFormatResponse.Points(points.win(), points.draw(), points.loss());
+    }
+
     public void deleteFormat(Tournament tournament) {
         matchStatRepository.deleteAllByTournament(tournament);
         matchRepository.deleteAllByTournament(tournament);
@@ -121,14 +144,15 @@ public class TournamentFormatService {
                         .toList(),
                 toStatResponses(statRepository.findAllByTournamentOrderBySeqAsc(tournament)),
                 current == null ? null : current.getId(),
-                tournament.getStatus() == TournamentStatus.OPEN && acceptedCount == 0
+                tournament.getStatus() == TournamentStatus.OPEN && acceptedCount == 0,
+                toPointsResponse(tournament)
         );
     }
 
     // ---- Start ----
 
     /** Draws the accepted players into slots, closes registration and fills the first stage's fixtures. */
-    public void start(Tournament tournament, StartTournamentRequest request) {
+    public void start(Tournament tournament, StartTournamentRequest request, Player actor) {
         if (!tournament.hasFormat()) {
             throw new BadRequestException("This tournament has no stages to start");
         }
@@ -170,19 +194,19 @@ public class TournamentFormatService {
             if (p.getStatus() == ParticipantStatus.PENDING) {
                 p.setStatus(ParticipantStatus.REJECTED);
                 p.setRespondedAt(now);
-                notify(p, "Registration closed", tournament.getName() + " started before your request was accepted", tournament);
+                notify(p, "Registration closed", tournament.getName() + " started before your request was accepted", tournament, actor);
             }
         }
         tournament.setStatus(TournamentStatus.IN_PROGRESS);
         tournament.setStartedAt(now);
         for (TournamentParticipant p : accepted) {
-            notify(p, tournament.getName() + " has started", "The draw is done. See your fixtures.", tournament);
+            notify(p, tournament.getName() + " has started", "The draw is done. See your fixtures.", tournament, actor);
         }
     }
 
     // ---- Results ----
 
-    public void recordMatch(Tournament tournament, Long matchId, MatchResultRequest request) {
+    public void recordMatch(Tournament tournament, Long matchId, MatchResultRequest request, Player actor) {
         requireInProgress(tournament);
         TournamentMatch match = matchRepository.findById(matchId)
                 .filter(m -> m.getStage().getTournament().getId().equals(tournament.getId()))
@@ -213,7 +237,36 @@ public class TournamentFormatService {
         Integer homePens = null;
         Integer awayPens = null;
         TournamentParticipant winner;
-        if (home != away) {
+        if (request.winner() != null) {
+            MatchResultRequest.Winner picked = request.winner();
+            if (picked == MatchResultRequest.Winner.DRAW) {
+                if (knockout) {
+                    throw new BadRequestException("A knockout match needs a winner");
+                }
+                if (home != away) {
+                    throw new BadRequestException("A draw needs a level final score");
+                }
+                winner = null;
+            } else {
+                boolean homeWon = picked == MatchResultRequest.Winner.HOME;
+                winner = homeWon ? match.getHome() : match.getAway();
+                if (home != away) {
+                    if ((home > away) != homeWon) {
+                        throw new BadRequestException("The final score has " + name(home > away ? match.getHome() : match.getAway()) + " winning");
+                    }
+                } else if (!knockout) {
+                    throw new BadRequestException("The final score is level, so pick Draw");
+                } else if (request.homePens() != null && request.awayPens() != null
+                        && !request.homePens().equals(request.awayPens())) {
+                    // The shootout score is optional, but when it's given it must agree with the winner
+                    if ((request.homePens() > request.awayPens()) != homeWon) {
+                        throw new BadRequestException("The penalty shootout has " + name(request.homePens() > request.awayPens() ? match.getHome() : match.getAway()) + " winning");
+                    }
+                    homePens = request.homePens();
+                    awayPens = request.awayPens();
+                }
+            }
+        } else if (home != away) {
             winner = home > away ? match.getHome() : match.getAway();
         } else if (knockout) {
             if (request.homePens() == null || request.awayPens() == null) {
@@ -249,9 +302,10 @@ public class TournamentFormatService {
         }
 
         String score = name(match.getHome()) + " " + home + "–" + away + " " + name(match.getAway())
-                + (homePens != null ? " (" + homePens + "–" + awayPens + " pens)" : "");
-        notify(match.getHome(), tournament.getName(), score, tournament);
-        notify(match.getAway(), tournament.getName(), score, tournament);
+                + (homePens != null ? " (" + homePens + "–" + awayPens + " pens)"
+                : knockout && home == away ? " (" + name(winner) + " won on pens)" : "");
+        notify(match.getHome(), tournament.getName(), score, tournament, actor);
+        notify(match.getAway(), tournament.getName(), score, tournament, actor);
     }
 
     private void saveStats(Tournament tournament, TournamentMatch match, List<MatchResultRequest.StatValue> values) {
@@ -278,7 +332,7 @@ public class TournamentFormatService {
 
     // ---- Finishing a stage ----
 
-    public void finish(Tournament tournament, Long stageId, FinishStageRequest request) {
+    public void finish(Tournament tournament, Long stageId, FinishStageRequest request, Player actor) {
         requireInProgress(tournament);
         List<TournamentStage> stages = stageRepository.findAllByTournamentOrderBySeqAsc(tournament);
         TournamentStage stage = stages.stream().filter(s -> s.getId().equals(stageId)).findFirst()
@@ -309,7 +363,7 @@ public class TournamentFormatService {
             groupMatches(matches).forEach((groupNo, groupMatches) -> {
                 List<TournamentParticipant> members = members(groupMatches);
                 members.forEach(p -> participants.put(p.getId(), p));
-                List<Standings.Row> rows = Standings.rank(members.stream().map(TournamentParticipant::getId).toList(), results(groupMatches));
+                List<Standings.Row> rows = Standings.rank(members.stream().map(TournamentParticipant::getId).toList(), results(groupMatches), tournament.points());
                 finalOrder.put(groupNo, applyOverride(stage, groupNo, rows, overrides.get(groupNo)));
             });
 
@@ -373,11 +427,11 @@ public class TournamentFormatService {
             String champion = accepted.stream().filter(p -> Integer.valueOf(1).equals(p.getPlacement()))
                     .findFirst().map(this::name).orElse("The champion");
             for (TournamentParticipant p : accepted) {
-                notify(p, "Results are in", champion + " won " + tournament.getName(), tournament);
+                notify(p, "Results are in", champion + " won " + tournament.getName(), tournament, actor);
             }
         } else {
             for (TournamentParticipant p : accepted) {
-                notify(p, tournament.getName(), "Stage " + stage.getSeq() + " is finished. See who goes through.", tournament);
+                notify(p, tournament.getName(), "Stage " + stage.getSeq() + " is finished. See who goes through.", tournament, actor);
             }
         }
     }
@@ -494,7 +548,7 @@ public class TournamentFormatService {
                     .add(v.getValue());
         }
         List<TournamentLeaderboardResponse.Row> overall = Standings.rank(
-                        players.stream().map(TournamentParticipant::getId).toList(), results(allMatches)).stream()
+                        players.stream().map(TournamentParticipant::getId).toList(), results(allMatches), tournament.points()).stream()
                 .map(row -> {
                     TournamentParticipant p = byId.get(row.participantId());
                     Map<Long, List<Double>> mine = raw.getOrDefault(p.getId(), Map.of());
@@ -525,7 +579,7 @@ public class TournamentFormatService {
                 if (members.isEmpty()) {
                     return; // The stage hasn't begun
                 }
-                List<Standings.Row> rows = new ArrayList<>(Standings.rank(members.stream().map(TournamentParticipant::getId).toList(), results(groupMatches)));
+                List<Standings.Row> rows = new ArrayList<>(Standings.rank(members.stream().map(TournamentParticipant::getId).toList(), results(groupMatches), tournament.points()));
                 if (stage.isFinished()) {
                     // Level players in the order the organizer settled: whoever went through, then by placement
                     rows.sort(Comparator.<Standings.Row>comparingInt(Standings.Row::tieBlock)
@@ -547,7 +601,7 @@ public class TournamentFormatService {
             });
             tables.add(new TournamentLeaderboardResponse.StageTable(stage.getId(), stage.getSeq(), stage.isFinished(), groups));
         }
-        return new TournamentLeaderboardResponse(toStatResponses(stats), overall, tables);
+        return new TournamentLeaderboardResponse(toPointsResponse(tournament), toStatResponses(stats), overall, tables);
     }
 
     private static double aggregate(TournamentStat stat, List<Double> values) {
@@ -672,10 +726,10 @@ public class TournamentFormatService {
         return value == null ? fallback : value;
     }
 
-    private void notify(TournamentParticipant participant, String title, String body, Tournament tournament) {
-        // The organizer caused this update, so a player who is also the organizer doesn't need telling
+    // [actor] is the organizer who caused this update: a player who is that organizer doesn't need telling
+    private void notify(TournamentParticipant participant, String title, String body, Tournament tournament, Player actor) {
         if (participant == null || participant.getPlayer() == null
-                || participant.getPlayer().getPlayerId().equals(tournament.getOrganizer().getPlayerId())) {
+                || participant.getPlayer().getPlayerId().equals(actor.getPlayerId())) {
             return;
         }
         events.publishEvent(new PushNotification(

@@ -34,7 +34,7 @@ class StandingsView extends StatelessWidget {
               ],
             const SizedBox(height: AppSpacing.md),
           ],
-          const _Legend(),
+          _Legend(leaderboard.points),
         ],
       ),
     );
@@ -42,12 +42,14 @@ class StandingsView extends StatelessWidget {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend();
+  final FormatPoints points;
+
+  const _Legend(this.points);
 
   @override
-  Widget build(BuildContext context) => const Text(
-        'Win 2 pts · Draw 1 pt · Loss 0. Ranked by points, then goal difference, goals scored, and head-to-head.',
-        style: TextStyle(color: AppColors.textSecondary, fontSize: 12),
+  Widget build(BuildContext context) => Text(
+        '${points.summary}. Ranked by points, then goal difference, goals scored, and head-to-head.',
+        style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
       );
 }
 
@@ -147,7 +149,8 @@ class _Cell extends StatelessWidget {
       );
 }
 
-/// Every player across all matches with the tournament's stats. Tap a column to sort by it.
+/// Every player across all matches: played, won, drawn, lost, goals and points. Tap a column to sort by it.
+/// The tournament's stats have their own tab ([StatsView]).
 class LeaderboardView extends StatefulWidget {
   final TournamentLeaderboard leaderboard;
   final bool completed;
@@ -172,7 +175,6 @@ class _LeaderboardViewState extends State<LeaderboardView> {
         _Column('GF', (r) => r.record.goalsFor),
         _Column('GD', (r) => r.record.goalDifference),
         _Column('Pts', (r) => r.record.points),
-        for (final stat in widget.leaderboard.stats) _Column(stat.label, (r) => r.statValue(stat.id), stat: stat),
         if (widget.completed) _Column('Place', (r) => r.placement, ascendingFirst: true),
       ];
 
@@ -219,7 +221,6 @@ class _LeaderboardViewState extends State<LeaderboardView> {
                     DataColumn(
                       numeric: true,
                       label: Text(c.label.toUpperCase()),
-                      tooltip: c.stat == null ? null : (c.stat!.aggregation == StatAggregation.avg ? 'Average per match' : 'Total'),
                       onSort: (_, _) => setState(() {
                         if (_sortColumn == i) {
                           _ascending = !_ascending;
@@ -261,9 +262,9 @@ class _LeaderboardViewState extends State<LeaderboardView> {
                 ],
               ),
             ),
-          const Padding(
-            padding: EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.sm, AppSpacing.gutter, 0),
-            child: _Legend(),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.sm, AppSpacing.gutter, 0),
+            child: _Legend(widget.leaderboard.points),
           ),
         ],
       ),
@@ -274,11 +275,10 @@ class _LeaderboardViewState extends State<LeaderboardView> {
 class _Column {
   final String label;
   final num? Function(LeaderboardRow row) value;
-  final FormatStat? stat;
   // Sort low-to-high on the first tap (e.g. placement)
   final bool ascendingFirst;
 
-  _Column(this.label, this.value, {this.stat, this.ascendingFirst = false});
+  _Column(this.label, this.value, {this.ascendingFirst = false});
 
   String format(LeaderboardRow row) {
     final v = value(row);
@@ -286,5 +286,138 @@ class _Column {
     if (label == 'Place') return ordinal(v.toInt());
     if (label == 'GD' && v > 0) return '+$v';
     return v is double ? formatStatValue(v) : '$v';
+  }
+}
+
+/// One table per stat: pick a stat and every player is ranked by it, highest first. Players with nothing
+/// recorded for it yet are listed last. Players level on the value share a rank.
+class StatsView extends StatefulWidget {
+  final TournamentLeaderboard leaderboard;
+  final Future<void> Function() onRefresh;
+
+  const StatsView({super.key, required this.leaderboard, required this.onRefresh});
+
+  @override
+  State<StatsView> createState() => _StatsViewState();
+}
+
+class _StatsViewState extends State<StatsView> {
+  late int? _statId = widget.leaderboard.stats.isEmpty ? null : widget.leaderboard.stats.first.id;
+
+  @override
+  Widget build(BuildContext context) {
+    final stats = widget.leaderboard.stats;
+    // The format may have changed since the last pick
+    final stat = stats.where((s) => s.id == _statId).firstOrNull ?? stats.firstOrNull;
+
+    return RefreshIndicator(
+      onRefresh: widget.onRefresh,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.gutter, AppSpacing.md, AppSpacing.gutter, AppSpacing.lg),
+        children: stat == null
+            ? const [EmptyNote("This tournament doesn't track any stats.")]
+            : [
+                ChoiceRow<int>(
+                  options: [for (final s in stats) (s.id, s.label)],
+                  selected: stat.id,
+                  onSelected: (id) => setState(() => _statId = id),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                _StatTable(stat: stat, rows: widget.leaderboard.overall),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  stat.aggregation == StatAggregation.avg
+                      ? '${stat.label}: average per match, over the matches it was recorded in.'
+                      : '${stat.label}: total across all matches.',
+                  style: const TextStyle(color: AppColors.textSecondary, fontSize: 12),
+                ),
+              ],
+      ),
+    );
+  }
+}
+
+class _StatTable extends StatelessWidget {
+  final FormatStat stat;
+  final List<LeaderboardRow> rows;
+
+  const _StatTable({required this.stat, required this.rows});
+
+  @override
+  Widget build(BuildContext context) {
+    final recorded = rows.where((r) => r.statValue(stat.id) != null).toList()
+      ..sort((a, b) => b.statValue(stat.id)!.compareTo(a.statValue(stat.id)!));
+    final missing = rows.where((r) => r.statValue(stat.id) == null).toList();
+    if (recorded.isEmpty) return EmptyNote('No ${stat.label} recorded yet. It fills in as results are entered.');
+
+    // Equal values share a rank: 1, 2, 2, 4
+    final ranks = <int>[];
+    for (var i = 0; i < recorded.length; i++) {
+      final same = i > 0 && recorded[i].statValue(stat.id) == recorded[i - 1].statValue(stat.id);
+      ranks.add(same ? ranks[i - 1] : i + 1);
+    }
+
+    return OutlineCard(
+      padding: EdgeInsets.zero,
+      child: Column(
+        children: [
+          _StatRow(rank: '#', name: 'PLAYER', value: stat.label.toUpperCase(), header: true),
+          for (final (i, row) in recorded.indexed)
+            _StatRow(
+              rank: '${ranks[i]}',
+              name: row.player.username,
+              value: formatStatValue(row.statValue(stat.id)!),
+              leader: ranks[i] == 1,
+              onTap: row.player.playerId == 0
+                  ? null
+                  : () => PlayerProfileScreen.open(context, row.player.playerId, username: row.player.username),
+            ),
+          for (final row in missing) _StatRow(rank: '–', name: row.player.username, value: '–', faded: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _StatRow extends StatelessWidget {
+  final String rank;
+  final String name;
+  final String value;
+  final bool header;
+  final bool leader;
+  final bool faded;
+  final VoidCallback? onTap;
+
+  const _StatRow({
+    required this.rank,
+    required this.name,
+    required this.value,
+    this.header = false,
+    this.leader = false,
+    this.faded = false,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final color = faded ? AppColors.textSecondary : (leader ? AppColors.primary : AppColors.textPrimary);
+    final TextStyle text = header
+        ? AppFonts.label(fontSize: 10.5)
+        : TextStyle(color: color, fontWeight: leader ? FontWeight.w700 : FontWeight.w400);
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 10),
+        decoration: header ? null : const BoxDecoration(border: Border(top: BorderSide(color: AppColors.border))),
+        child: Row(
+          children: [
+            SizedBox(width: 32, child: Text(rank, style: header ? text : text.copyWith(color: AppColors.textSecondary))),
+            Expanded(child: Text(name, overflow: TextOverflow.ellipsis, style: text)),
+            const SizedBox(width: AppSpacing.sm),
+            Text(value, style: header ? text : text.copyWith(fontFamily: AppFonts.mono)),
+          ],
+        ),
+      ),
+    );
   }
 }

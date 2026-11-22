@@ -40,10 +40,12 @@ public interface TournamentParticipantRepository extends JpaRepository<Tournamen
     @Query("SELECT p FROM TournamentParticipant p WHERE p.player = :player AND p.tournament.id IN :ids")
     List<TournamentParticipant> findMine(@Param("player") Player player, @Param("ids") Collection<Long> ids);
 
-    // Pending requests to every tournament the player organizes, newest first
+    // Pending requests to every tournament the player created or co-organizes, newest first
     @Query("""
             SELECT p FROM TournamentParticipant p JOIN FETCH p.player JOIN FETCH p.tournament t
-            WHERE t.organizer = :organizer AND p.status = com.example.gamify.entity.ParticipantStatus.PENDING
+            WHERE (t.organizer = :organizer
+                   OR t.id IN (SELECT c.tournament.id FROM TournamentCoOrganizer c WHERE c.player = :organizer))
+            AND p.status = com.example.gamify.entity.ParticipantStatus.PENDING
             AND t.status = com.example.gamify.entity.TournamentStatus.OPEN
             ORDER BY p.createdAt DESC
             """)

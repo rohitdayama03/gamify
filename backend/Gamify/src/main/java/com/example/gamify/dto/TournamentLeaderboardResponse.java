@@ -5,9 +5,11 @@ import java.util.List;
 /**
  * {@code overall}: every player across all matches, by points, then goal difference, then goals scored, with
  * their stat totals (or averages). {@code stages}: the table of each league group; knockouts appear in the
- * fixtures instead. A stage that hasn't begun has no groups yet.
+ * fixtures instead. A stage that hasn't begun has no groups yet. {@code points} are what a win, draw and loss
+ * are worth in these tables.
  */
 public record TournamentLeaderboardResponse(
+        TournamentFormatResponse.Points points,
         List<TournamentFormatResponse.Stat> stats,
         List<Row> overall,
         List<StageTable> stages
